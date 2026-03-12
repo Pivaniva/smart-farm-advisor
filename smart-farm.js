@@ -114,12 +114,15 @@ function renderAuthUI() {
     setAuthStatusText(`სტატუსი: შესულია - ${currentUser.email}`);
     logoutBtn.classList.remove("hidden");
     authForm.classList.add("hidden");
+    setupPanel.classList.remove("hidden");
     return;
   }
 
-  setAuthStatusText("სტატუსი: სტუმარი რეჟიმი");
+  setAuthStatusText("სტატუსი: ჯერ შედით ელ-ფოსტით");
   logoutBtn.classList.add("hidden");
   authForm.classList.remove("hidden");
+  setupPanel.classList.add("hidden");
+  dashboardPanel.classList.add("hidden");
 }
 
 async function verifySupabaseConnection() {
@@ -184,6 +187,12 @@ async function logout() {
 async function reloadDataForCurrentScope() {
   await verifySupabaseConnection();
   await refreshTaskHistory();
+
+  if (supabaseClient && !currentUser) {
+    setupPanel.classList.add("hidden");
+    dashboardPanel.classList.add("hidden");
+    return;
+  }
 
   const data = await loadSetup();
   if (!data) {
