@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ka">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ჭკვიანი ფერმერის ასისტენტი</title>
+    <link rel="stylesheet" href="smart-farm.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel" id="setup-panel">
+        <h1>ჭკვიანი ფერმერის ასისტენტი</h1>
+        <p class="muted">შეიყვანეთ კულტურის მონაცემები და მიიღეთ ყოველდღიური რეკომენდაციები.</p>
+
+        <form id="setup-form">
+          <label for="crop">კულტურის ტიპი</label>
+          <select id="crop" name="crop" required>
+            <option value="">აირჩიეთ კულტურა</option>
+            <option value="maize">სიმინდი</option>
+            <option value="wheat">ხორბალი</option>
+            <option value="tomato">პომიდორი</option>
+            <option value="potato">კარტოფილი</option>
+            <option value="rice">ბრინჯი</option>
+            <option value="vine">ვაზი (ღვინო)</option>
+            <option value="nuts">თხილი/კაკალი</option>
+          </select>
+
+          <label for="location">მდებარეობა</label>
+          <input id="location" name="location" type="text" placeholder="მაგ.: თბილისი" required />
+
+          <label for="planting-date">დათესვის თარიღი</label>
+          <input id="planting-date" name="plantingDate" type="date" required />
+
+          <button type="submit">რეკომენდაციის გენერირება</button>
+        </form>
+      </section>
+
+      <section class="panel hidden" id="dashboard-panel">
+        <header class="dashboard-header">
+          <h2>დღევანდელი აგრო რეკომენდაცია</h2>
+          <button id="edit-btn" class="secondary" type="button">შეცვლა</button>
+        </header>
+
+        <div class="meta">
+          <p><strong>კულტურა:</strong> <span id="out-crop">-</span></p>
+          <p><strong>მდებარეობა:</strong> <span id="out-location">-</span></p>
+          <p><strong>ამინდი:</strong> <span id="out-weather">-</span></p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>ზრდის სავარაუდო ფაზა</h3>
+            <p id="out-stage">-</p>
+          </article>
+
+          <article class="card">
+            <h3>მორწყვის რჩევა</h3>
+            <p id="out-watering">-</p>
+          </article>
+
+          <article class="card">
+            <h3>დაავადება/სოკოს რისკი</h3>
+            <p id="out-risk">-</p>
+          </article>
+
+          <article class="card">
+            <h3>შეწამვლის რჩევა</h3>
+            <p id="out-spraying">-</p>
+          </article>
+
+          <article class="card">
+            <h3>სასუქის რეკომენდაცია</h3>
+            <p id="out-fertilizer">-</p>
+          </article>
+
+          <article class="card">
+            <h3>ფუნგიციდი/პესტიციდი</h3>
+            <p id="out-pesticide">-</p>
+          </article>
+
+          <article class="card alert-card">
+            <h3>მოკლე გაფრთხილება</h3>
+            <p id="out-alert">-</p>
+          </article>
+        </div>
+
+        <section class="task-panel">
+          <h3>დღევანდელი მოქმედებების მონიშვნა</h3>
+          <div class="task-buttons">
+            <button type="button" class="task-btn" data-task="watering">მოვრწყე</button>
+            <button type="button" class="task-btn" data-task="spraying">შევწამე</button>
+            <button type="button" class="task-btn" data-task="inspection">შემოწმება გავაკეთე</button>
+          </div>
+          <div class="task-log">
+            <h4>შესრულებული მოქმედებები</h4>
+            <ul id="task-history">
+              <li>ჯერ ჩანაწერი არ არის.</li>
+            </ul>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="smart-farm.js"></script>
+  </body>
+</html>
