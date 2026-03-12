@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat AI Platform Presentation</title>
+    <link rel="stylesheet" href="presentation-chat-ai.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Chat AI Platform</h1>
+      <nav aria-label="Slide navigation">
+        <a href="#s1">Overview</a>
+        <a href="#s2">Problem</a>
+        <a href="#s3">Architecture</a>
+        <a href="#s4">Flow</a>
+        <a href="#s5">Tech</a>
+        <a href="#s6">Ops</a>
+        <a href="#s7">Risks</a>
+        <a href="#s8">Roadmap</a>
+      </nav>
+    </header>
+
+    <main class="slides" id="main">
+      <section class="slide" id="s1">
+        <p class="eyebrow">Product Presentation</p>
+        <h2>AI-Powered Dealership Chat</h2>
+        <p>
+          Chat AI engages website visitors, answers questions from CMS and inventory,
+          captures leads, schedules appointments, and notifies dealership teams.
+        </p>
+        <ul>
+          <li>Real-time web chat + specialist takeover</li>
+          <li>OpenAI-assisted responses and intent handling</li>
+          <li>CRM registration and analytics events</li>
+        </ul>
+      </section>
+
+      <section class="slide" id="s2">
+        <h2>Problem We Solve</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>Customer Friction</h3>
+            <p>Visitors leave websites when responses are slow or inventory info is hard to find.</p>
+          </article>
+          <article class="card">
+            <h3>Lead Loss</h3>
+            <p>Leads are missed without structured capture, CRM sync, and routing.</p>
+          </article>
+          <article class="card">
+            <h3>Appointment Drop-off</h3>
+            <p>Scheduling fails when business hours and availability are not validated.</p>
+          </article>
+          <article class="card">
+            <h3>Operational Blind Spots</h3>
+            <p>Teams need event logs, notifications, and GA4 signals for performance tracking.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" id="s3">
+        <h2>System Architecture</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>Core Runtime</h3>
+            <ul>
+              <li>WebChat Service (REST + WebSocket gateway)</li>
+              <li>Chat Engine (AI orchestration + state machine)</li>
+              <li>Queue Processor (async CRM + notifications + GA4)</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Platform Services</h3>
+            <ul>
+              <li>Platform Resources API (hours/settings/CMS)</li>
+              <li>Account Management APIs</li>
+              <li>Platform Notifications + URL Shortener</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Data & Messaging</h3>
+            <ul>
+              <li>DynamoDB: conversation state/events/settings</li>
+              <li>OpenSearch: inventory lookup</li>
+              <li>S3: UI settings, images, embeddings</li>
+              <li>Redis: pub/sub + queueing</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>External Integrations</h3>
+            <ul>
+              <li>OpenAI (responses + embeddings)</li>
+              <li>CRMs: DealerSocket, VinSolutions, ELEAD, Unified</li>
+              <li>Twilio, Auth0, GA4</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" id="s4">
+        <h2>End-to-End Flow</h2>
+        <ol class="flow">
+          <li>User opens chat -> WebChat WebSocket session starts.</li>
+          <li>Message forwarded to Chat Engine; state saved in DynamoDB.</li>
+          <li>AI decides response/tooling (CMS, inventory, scheduling).</li>
+          <li>Bot response pushed in real time via Redis pub/sub.</li>
+          <li>Lead events trigger immediate or queued CRM registration.</li>
+          <li>Notifications + GA4 events emitted for reporting and operations.</li>
+        </ol>
+      </section>
+
+      <section class="slide" id="s5">
+        <h2>Technology Stack</h2>
+        <div class="stack-grid">
+          <article class="card"><h3>Backend</h3><p>Python Flask, AWS Lambda, RQ workers</p></article>
+          <article class="card"><h3>Data</h3><p>DynamoDB, OpenSearch, S3, Redis</p></article>
+          <article class="card"><h3>AI</h3><p>OpenAI GPT models + embedding pipelines</p></article>
+          <article class="card"><h3>Infra</h3><p>ECS Fargate, Serverless Framework, Bitbucket Pipelines</p></article>
+          <article class="card"><h3>Security</h3><p>JWT/Auth0, service tokens, IAM roles</p></article>
+          <article class="card"><h3>Analytics</h3><p>GA4 Measurement Protocol, event logging</p></article>
+        </div>
+      </section>
+
+      <section class="slide" id="s6">
+        <h2>Operations & Reliability</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>Scalability</h3>
+            <ul>
+              <li>WebSocket fan-out using Redis pub/sub</li>
+              <li>Async lead queue with retries/backoff</li>
+              <li>Versioned inventory indexing with alias switching</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Observability</h3>
+            <ul>
+              <li>DynamoDB event trail for conversations</li>
+              <li>CloudWatch service logs</li>
+              <li>GA4 event stream for behavior metrics</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" id="s7">
+        <h2>Known Risks & Mitigations</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th>Impact</th>
+              <th>Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OpenAI/API outages</td>
+              <td>Response quality or latency degradation</td>
+              <td>Fallback messaging + retries + monitoring</td>
+            </tr>
+            <tr>
+              <td>CRM integration failures</td>
+              <td>Lead drop or delayed registration</td>
+              <td>Queue retries, failure logs, token health checks</td>
+            </tr>
+            <tr>
+              <td>Inventory index mismatch</td>
+              <td>Poor vehicle search results</td>
+              <td>Alias validation and index version controls</td>
+            </tr>
+            <tr>
+              <td>Subscriber filtering too strict</td>
+              <td>Missed operational notifications</td>
+              <td>Principal rules audit and test subscribers</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="slide" id="s8">
+        <h2>Roadmap & Demo Plan</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>Next Improvements</h3>
+            <ul>
+              <li>Better conversation summarization and lead scoring</li>
+              <li>Expanded CRM adapter test coverage</li>
+              <li>Enhanced dashboard metrics for funnel stages</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Live Demo Script</h3>
+            <ol>
+              <li>Start visitor session in website chat widget</li>
+              <li>Ask inventory question and show carousel</li>
+              <li>Submit contact details and appointment request</li>
+              <li>Show CRM/notification/analytics outputs</li>
+            </ol>
+          </article>
+        </div>
+        <p class="closing">Q&A</p>
+      </section>
+    </main>
+  </body>
+</html>

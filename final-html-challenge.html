@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="beginner-css.css" />
+    <title>Final HTML Challenge</title>
+  </head>
+  <body>
+    <!-- 1) HEADER
+      - h1 site title
+      - nav with links to #about #services #faq #contact
+    -->
+      <header>
+        <h1>Tbilisi</h1>
+        <nav>
+          <a href="#about">about</a>
+          <a href="#services">service</a>
+          <a href="#faq">faq</a>
+          <a href="#contact">contact</a>
+        </nav>
+      </header>
+
+    <!-- 2) MAIN -->
+    <!-- section id="about"
+      - h2 + paragraph
+      - figure with img + alt + figcaption
+    -->
+      <main>
+        <section id="about">
+        <h2>about</h2>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Saepe, pariatur nam perspiciatis totam voluptatum tenetur numquam, accusamus cumque aperiam vero minima nemo maiores reiciendis commodi doloribus vel eligendi repellendus ullam!</p>
+        <figure>
+          <img src="#" alt="image with #">
+          <figcaption>image caption text</figcaption>
+        </figure>
+
+        </section>
+
+    <!-- section id="services"
+      - h2
+      - 3 article cards
+      - each article: h3 + p + a
+    -->
+      <section id="services">
+      <h2>services</h2>
+      <article>
+        <h3>saburtalo</h3>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus aliquam hic veritatis et dolor officiis, repellat reiciendis cumque inventore at nobis eius est quidem, fuga commodi, numquam nulla aut. In!</p>
+        <a href="#">read more</a>
+      </article>
+      <article>
+        <h3>saburtalo</h3>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus aliquam hic veritatis et dolor officiis, repellat reiciendis cumque inventore at nobis eius est quidem, fuga commodi, numquam nulla aut. In!</p>
+        <a href="#">read more</a>
+      </article>
+      <article>
+        <h3>saburtalo</h3>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus aliquam hic veritatis et dolor officiis, repellat reiciendis cumque inventore at nobis eius est quidem, fuga commodi, numquam nulla aut. In!</p>
+        <a href="#">read more</a>
+      </article>
+
+
+
+      </section>
+
+    <!-- section id="faq"
+      - h2
+      - 3 details blocks
+      - each details has summary + paragraph
+    -->
+      <section id="faq">
+      <h2>faq</h2>
+      <details>
+      <summary>what is saburtalo?</summary>
+      <p> saburtalo is ubani</p>
+      </details>
+      <details>
+      <summary>what is vake?</summary>
+      <p> saburtalo is ubani</p>
+      </details>
+      <details>
+      <summary>what is vera?</summary>
+      <p> saburtalo is ubani</p>
+      </details>
+
+
+
+
+      </section>
+
+
+    <!-- section id="contact"
+      - h2
+      - form with fieldset + legend
+      - name/email/message + submit
+      - labels connected using for/id
+      - required on inputs and textarea
+    -->
+      <section id="contact">
+      <fieldset>
+        <legend>contact form</legend>
+        <label for="name">name</label>
+        <input id="name" name="name" type="text" required>
+        <label for="email">email</label>
+        <input id="email" name="email" type="email" required>
+        <label for="message">message</label>
+        <textarea id="message" name="message"></textarea>
+        <button type="submit">submit</button>
+        </fieldset>
+      </section>
+      </main>
+      <!-- 3) FOOTER
+      - one paragraph
+      - address with mailto link
+    -->
+      <footer>
+       <P>made by iva</P>
+       <address>
+        <a href="mailto:pipipapo@mail.com">send email</a>
+       </address>
+
+      </footer>
+  </body>
+</html>

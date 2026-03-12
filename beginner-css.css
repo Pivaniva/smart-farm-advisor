@@ -1,0 +1,62 @@
+/* Step 1: Reset + Body basics */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  background: #f4f7fb;
+  color: #1f2937;
+}
+header {
+  background: #0b7285;
+  color: #fff;
+  padding: 20px;
+}
+
+header h1 {
+  margin: 0 0 10px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  margin-right: 12px;
+  font-weight: 600;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+main {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0px 16px;
+}
+
+section {
+  background: #ffffff;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 56px;
+}
+
+article {
+  background: #f8fbff;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+footer {
+  text-align: center;
+  padding: 16px;
+  color: #4b5563;
+}
+
