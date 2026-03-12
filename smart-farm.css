@@ -118,6 +118,17 @@ button:hover {
   margin: 4px 0;
 }
 
+.sync-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f4a86;
+  background: #e9f3ff;
+  border: 1px solid #cfe3ff;
+}
+
 .cards {
   display: grid;
   gap: 10px;

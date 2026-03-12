@@ -6,6 +6,7 @@ const editBtn = document.getElementById("edit-btn");
 const outCrop = document.getElementById("out-crop");
 const outLocation = document.getElementById("out-location");
 const outWeather = document.getElementById("out-weather");
+const outSync = document.getElementById("out-sync");
 const outStage = document.getElementById("out-stage");
 const outWatering = document.getElementById("out-watering");
 const outRisk = document.getElementById("out-risk");
@@ -15,6 +16,10 @@ const outPesticide = document.getElementById("out-pesticide");
 const outAlert = document.getElementById("out-alert");
 const taskButtons = document.querySelectorAll(".task-btn");
 const taskHistory = document.getElementById("task-history");
+
+const LEGACY_SETUP_KEY = "smartFarmSetup";
+const LOCAL_TASKS_KEY = "smartFarmTaskHistory";
+const DEVICE_ID_KEY = "smartFarmDeviceId";
 
 const cropLabelsKa = {
   maize: "სიმინდი",
@@ -32,8 +37,69 @@ const taskLabelsKa = {
   inspection: "შემოწმება შესრულდა"
 };
 
-function getTaskStorageKey() {
-  return "smartFarmTaskHistory";
+function getOrCreateDeviceId() {
+  const existing = localStorage.getItem(DEVICE_ID_KEY);
+  if (existing) return existing;
+
+  const created =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `device-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+  localStorage.setItem(DEVICE_ID_KEY, created);
+  return created;
+}
+
+const deviceId = getOrCreateDeviceId();
+
+const appConfig = window.APP_CONFIG || {};
+let supabaseClient = null;
+let syncModeLabel = "ლოკალური";
+let supabaseReady = false;
+
+if (
+  window.supabase &&
+  typeof window.supabase.createClient === "function" &&
+  appConfig.supabaseUrl &&
+  appConfig.supabaseAnonKey
+) {
+  try {
+    supabaseClient = window.supabase.createClient(appConfig.supabaseUrl, appConfig.supabaseAnonKey);
+  } catch (_) {
+    supabaseClient = null;
+    syncModeLabel = "ლოკალური";
+  }
+}
+
+function setSyncBadge() {
+  outSync.textContent = syncModeLabel;
+}
+
+function setLocalMode(reason) {
+  supabaseReady = false;
+  syncModeLabel = reason ? `ლოკალური (${reason})` : "ლოკალური";
+  setSyncBadge();
+}
+
+function setCloudMode() {
+  supabaseReady = true;
+  syncModeLabel = "ქლაუდი (Supabase)";
+  setSyncBadge();
+}
+
+async function verifySupabaseConnection() {
+  if (!supabaseClient) {
+    setLocalMode();
+    return;
+  }
+
+  const { error } = await supabaseClient.from("farm_profiles").select("device_id").limit(1);
+  if (error) {
+    setLocalMode("ქლაუდი მიუწვდომელია");
+    return;
+  }
+
+  setCloudMode();
 }
 
 function formatDateTimeKa(date) {
@@ -46,8 +112,8 @@ function formatDateTimeKa(date) {
   }).format(date);
 }
 
-function readTaskHistory() {
-  const raw = localStorage.getItem(getTaskStorageKey());
+function readLocalTaskHistory() {
+  const raw = localStorage.getItem(LOCAL_TASKS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -57,12 +123,11 @@ function readTaskHistory() {
   }
 }
 
-function writeTaskHistory(items) {
-  localStorage.setItem(getTaskStorageKey(), JSON.stringify(items));
+function writeLocalTaskHistory(items) {
+  localStorage.setItem(LOCAL_TASKS_KEY, JSON.stringify(items));
 }
 
-function renderTaskHistory() {
-  const items = readTaskHistory();
+function renderTaskHistory(items) {
   if (!items.length) {
     taskHistory.innerHTML = "<li>ჯერ ჩანაწერი არ არის.</li>";
     return;
@@ -74,15 +139,101 @@ function renderTaskHistory() {
     .join("");
 }
 
-function addTaskRecord(taskKey) {
-  const items = readTaskHistory();
-  items.unshift({
+async function loadTaskHistory() {
+  if (!supabaseClient || !supabaseReady) return readLocalTaskHistory();
+
+  const { data, error } = await supabaseClient
+    .from("task_history")
+    .select("task_key,label,created_at")
+    .eq("device_id", deviceId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    setLocalMode("ჩაწერა ვერ მოხერხდა");
+    return readLocalTaskHistory();
+  }
+
+  return (data || []).map((row) => ({
+    task: row.task_key,
+    label: row.label || taskLabelsKa[row.task_key] || row.task_key,
+    time: formatDateTimeKa(new Date(row.created_at))
+  }));
+}
+
+async function refreshTaskHistory() {
+  const items = await loadTaskHistory();
+  renderTaskHistory(items);
+}
+
+async function addTaskRecord(taskKey) {
+  const record = {
     task: taskKey,
     label: taskLabelsKa[taskKey] || taskKey,
     time: formatDateTimeKa(new Date())
-  });
-  writeTaskHistory(items.slice(0, 50));
-  renderTaskHistory();
+  };
+
+  const localItems = readLocalTaskHistory();
+  localItems.unshift(record);
+  writeLocalTaskHistory(localItems.slice(0, 50));
+
+  if (supabaseClient && supabaseReady) {
+    const { error } = await supabaseClient.from("task_history").insert({
+      device_id: deviceId,
+      task_key: taskKey,
+      label: record.label
+    });
+    if (error) setLocalMode("ქლაუდი ვერ ჩაიწერა");
+  }
+
+  await refreshTaskHistory();
+}
+
+async function saveSetup(data) {
+  localStorage.setItem(LEGACY_SETUP_KEY, JSON.stringify(data));
+
+  if (!supabaseClient || !supabaseReady) return;
+
+  const { error } = await supabaseClient.from("farm_profiles").upsert(
+    {
+      device_id: deviceId,
+      crop: data.crop,
+      location: data.location,
+      planting_date: data.plantingDate
+    },
+    { onConflict: "device_id" }
+  );
+  if (error) setLocalMode("პროფილი ვერ ჩაიწერა");
+}
+
+async function loadSetup() {
+  if (supabaseClient && supabaseReady) {
+    const { data, error } = await supabaseClient
+      .from("farm_profiles")
+      .select("crop,location,planting_date")
+      .eq("device_id", deviceId)
+      .maybeSingle();
+
+    if (!error && data?.crop && data?.location && data?.planting_date) {
+      return {
+        crop: String(data.crop).trim(),
+        location: String(data.location).trim(),
+        plantingDate: String(data.planting_date).trim()
+      };
+    }
+  }
+
+  const saved = localStorage.getItem(LEGACY_SETUP_KEY);
+  if (!saved) return null;
+
+  try {
+    const parsed = JSON.parse(saved);
+    if (!parsed.crop || !parsed.location || !parsed.plantingDate) return null;
+    return parsed;
+  } catch (_) {
+    localStorage.removeItem(LEGACY_SETUP_KEY);
+    return null;
+  }
 }
 
 const mockWeatherByLocation = {
@@ -92,7 +243,6 @@ const mockWeatherByLocation = {
   default: { tempC: 26, humidity: 70, rainMm: 2, condition: "თბილი ამინდი" }
 };
 
-// Reliable coordinates for common Georgian inputs.
 const georgiaCityCoordinates = {
   "თბილისი": { latitude: 41.7151, longitude: 44.8271 },
   tbilisi: { latitude: 41.7151, longitude: 44.8271 },
@@ -180,7 +330,6 @@ const growthByCrop = {
   ]
 };
 
-// Base temperature + GDD ranges are rough agronomic defaults for demo usage.
 const gddByCrop = {
   maize: {
     baseTemp: 10,
@@ -287,9 +436,21 @@ async function geocodeLocation(name, language) {
   return { latitude: place.latitude, longitude: place.longitude };
 }
 
+async function fetchCoordinates(location) {
+  const normalized = normalizeLocation(location);
+  if (georgiaCityCoordinates[normalized]) return georgiaCityCoordinates[normalized];
+
+  const kaResult = await geocodeLocation(location, "ka");
+  if (kaResult) return kaResult;
+
+  const enResult = await geocodeLocation(location, "en");
+  if (enResult) return enResult;
+
+  throw new Error("მდებარეობა ვერ მოიძებნა");
+}
+
 async function fetchLiveWeather(location) {
   const place = await fetchCoordinates(location);
-
   const weatherUrl =
     `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}` +
     `&longitude=${place.longitude}` +
@@ -312,27 +473,9 @@ async function fetchLiveWeather(location) {
   };
 }
 
-async function fetchCoordinates(location) {
-  const normalized = normalizeLocation(location);
-
-  if (georgiaCityCoordinates[normalized]) {
-    return georgiaCityCoordinates[normalized];
-  }
-
-  // Try Georgian geocoding first, then English as fallback.
-  const kaResult = await geocodeLocation(location, "ka");
-  if (kaResult) return kaResult;
-
-  const enResult = await geocodeLocation(location, "en");
-  if (enResult) return enResult;
-
-  throw new Error("მდებარეობა ვერ მოიძებნა");
-}
-
 async function fetchAccumulatedGdd(location, plantingDate, baseTemp) {
   const coords = await fetchCoordinates(location);
   const endDate = new Date().toISOString().slice(0, 10);
-
   const archiveUrl =
     `https://archive-api.open-meteo.com/v1/archive?latitude=${coords.latitude}` +
     `&longitude=${coords.longitude}` +
@@ -352,10 +495,8 @@ async function fetchAccumulatedGdd(location, plantingDate, baseTemp) {
   let totalGdd = 0;
   for (let i = 0; i < tMax.length; i += 1) {
     const mean = (Number(tMax[i]) + Number(tMin[i])) / 2;
-    const dailyGdd = Math.max(0, mean - baseTemp);
-    totalGdd += dailyGdd;
+    totalGdd += Math.max(0, mean - baseTemp);
   }
-
   return Math.round(totalGdd);
 }
 
@@ -392,7 +533,6 @@ function buildAdvice(crop, dayCount, weather) {
       ? "გაფრთხილება: შუადღით მოსალოდნელია სითბური სტრესი. პიკის დროს მორწყვას მოერიდეთ."
       : "გაფრთხილება: პირობები სტაბილურია. გააგრძელეთ რეგულარული მონიტორინგი.";
 
-  // Simple demo recommendations by crop + stage + risk (not agronomic prescription).
   const fertilizerByCrop = {
     maize: {
       "გაღივება": "NPK 10-20-20 მცირე დოზით, რიგებს შორის.",
@@ -453,8 +593,7 @@ function buildAdvice(crop, dayCount, weather) {
     pesticide =
       "რეკომენდებულია კონტაქტური ან სისტემური ფუნგიციდის პროფილაქტიკური გამოყენება ეტიკეტის ინსტრუქციის დაცვით.";
   } else if (risk === "საშუალო") {
-    pesticide =
-      "დაიწყეთ ბიოფუნგიციდით/მსუბუქი პროფილაქტიკით და დააკვირდით სიმპტომებს 24-48 საათში.";
+    pesticide = "დაიწყეთ ბიოფუნგიციდით/მსუბუქი პროფილაქტიკით და დააკვირდით სიმპტომებს 24-48 საათში.";
   }
 
   if (weather.tempC >= 32) {
@@ -466,8 +605,10 @@ function buildAdvice(crop, dayCount, weather) {
 
 async function renderDashboard(data) {
   let weather;
-  let gdd = null;
+  let gdd;
   let stageText;
+
+  setSyncBadge();
 
   try {
     weather = await fetchLiveWeather(data.location);
@@ -502,7 +643,7 @@ async function renderDashboard(data) {
   dashboardPanel.classList.remove("hidden");
 }
 
-setupForm.addEventListener("submit", (e) => {
+setupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const formData = new FormData(setupForm);
   const data = {
@@ -513,8 +654,8 @@ setupForm.addEventListener("submit", (e) => {
 
   if (!data.crop || !data.location || !data.plantingDate) return;
 
-  localStorage.setItem("smartFarmSetup", JSON.stringify(data));
-  void renderDashboard(data);
+  await saveSetup(data);
+  await renderDashboard(data);
 });
 
 editBtn.addEventListener("click", () => {
@@ -523,31 +664,25 @@ editBtn.addEventListener("click", () => {
 });
 
 taskButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     const taskKey = btn.dataset.task || "";
     if (!taskKey) return;
-    addTaskRecord(taskKey);
+
+    await addTaskRecord(taskKey);
     btn.classList.add("done");
     setTimeout(() => btn.classList.remove("done"), 1000);
   });
 });
 
-(function bootstrapFromStorage() {
-  const saved = localStorage.getItem("smartFarmSetup");
-  if (!saved) return;
+(async function bootstrap() {
+  await verifySupabaseConnection();
+  await refreshTaskHistory();
 
-  try {
-    const data = JSON.parse(saved);
-    if (!data.crop || !data.location || !data.plantingDate) return;
+  const data = await loadSetup();
+  if (!data) return;
 
-    document.getElementById("crop").value = data.crop;
-    document.getElementById("location").value = data.location;
-    document.getElementById("planting-date").value = data.plantingDate;
-
-    void renderDashboard(data);
-  } catch (_) {
-    localStorage.removeItem("smartFarmSetup");
-  }
-
-  renderTaskHistory();
+  document.getElementById("crop").value = data.crop;
+  document.getElementById("location").value = data.location;
+  document.getElementById("planting-date").value = data.plantingDate;
+  await renderDashboard(data);
 })();
