@@ -36,6 +36,10 @@ body {
   box-shadow: 0 10px 24px rgba(18, 37, 18, 0.08);
 }
 
+.panel + .panel {
+  margin-top: 12px;
+}
+
 h1,
 h2,
 h3 {
@@ -44,6 +48,10 @@ h3 {
 
 .muted {
   color: var(--muted);
+}
+
+.auth-panel h2 {
+  margin-bottom: 8px;
 }
 
 form {

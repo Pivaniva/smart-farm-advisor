@@ -2,6 +2,10 @@ const setupForm = document.getElementById("setup-form");
 const setupPanel = document.getElementById("setup-panel");
 const dashboardPanel = document.getElementById("dashboard-panel");
 const editBtn = document.getElementById("edit-btn");
+const authForm = document.getElementById("auth-form");
+const authStatus = document.getElementById("auth-status");
+const authEmail = document.getElementById("auth-email");
+const logoutBtn = document.getElementById("logout-btn");
 
 const outCrop = document.getElementById("out-crop");
 const outLocation = document.getElementById("out-location");
@@ -17,8 +21,8 @@ const outAlert = document.getElementById("out-alert");
 const taskButtons = document.querySelectorAll(".task-btn");
 const taskHistory = document.getElementById("task-history");
 
-const LEGACY_SETUP_KEY = "smartFarmSetup";
-const LOCAL_TASKS_KEY = "smartFarmTaskHistory";
+const LEGACY_SETUP_KEY_BASE = "smartFarmSetup";
+const LOCAL_TASKS_KEY_BASE = "smartFarmTaskHistory";
 const DEVICE_ID_KEY = "smartFarmDeviceId";
 
 const cropLabelsKa = {
@@ -56,6 +60,7 @@ const appConfig = window.APP_CONFIG || {};
 let supabaseClient = null;
 let syncModeLabel = "ლოკალური";
 let supabaseReady = false;
+let currentUser = null;
 
 if (
   window.supabase &&
@@ -87,6 +92,36 @@ function setCloudMode() {
   setSyncBadge();
 }
 
+function getScopeId() {
+  if (currentUser?.id) return `user:${currentUser.id}`;
+  return `device:${deviceId}`;
+}
+
+function getSetupStorageKey() {
+  return `${LEGACY_SETUP_KEY_BASE}:${getScopeId()}`;
+}
+
+function getTaskStorageKey() {
+  return `${LOCAL_TASKS_KEY_BASE}:${getScopeId()}`;
+}
+
+function setAuthStatusText(text) {
+  authStatus.textContent = text;
+}
+
+function renderAuthUI() {
+  if (currentUser?.email) {
+    setAuthStatusText(`სტატუსი: შესულია - ${currentUser.email}`);
+    logoutBtn.classList.remove("hidden");
+    authForm.classList.add("hidden");
+    return;
+  }
+
+  setAuthStatusText("სტატუსი: სტუმარი რეჟიმი");
+  logoutBtn.classList.add("hidden");
+  authForm.classList.remove("hidden");
+}
+
 async function verifySupabaseConnection() {
   if (!supabaseClient) {
     setLocalMode();
@@ -102,6 +137,67 @@ async function verifySupabaseConnection() {
   setCloudMode();
 }
 
+async function initAuth() {
+  if (!supabaseClient) {
+    currentUser = null;
+    renderAuthUI();
+    return;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data?.session?.user || null;
+  renderAuthUI();
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    renderAuthUI();
+    void reloadDataForCurrentScope();
+  });
+}
+
+async function sendLoginLink(email) {
+  if (!supabaseClient) {
+    setAuthStatusText("სტატუსი: Supabase არ არის კონფიგურირებული");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}${window.location.pathname}`
+    }
+  });
+
+  if (error) {
+    setAuthStatusText("სტატუსი: შესვლის ლინკი ვერ გაიგზავნა");
+    return;
+  }
+
+  setAuthStatusText("სტატუსი: შეამოწმეთ ელ-ფოსტა და გახსენით ლინკი");
+}
+
+async function logout() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+}
+
+async function reloadDataForCurrentScope() {
+  await verifySupabaseConnection();
+  await refreshTaskHistory();
+
+  const data = await loadSetup();
+  if (!data) {
+    dashboardPanel.classList.add("hidden");
+    setupPanel.classList.remove("hidden");
+    return;
+  }
+
+  document.getElementById("crop").value = data.crop;
+  document.getElementById("location").value = data.location;
+  document.getElementById("planting-date").value = data.plantingDate;
+  await renderDashboard(data);
+}
+
 function formatDateTimeKa(date) {
   return new Intl.DateTimeFormat("ka-GE", {
     year: "numeric",
@@ -113,7 +209,7 @@ function formatDateTimeKa(date) {
 }
 
 function readLocalTaskHistory() {
-  const raw = localStorage.getItem(LOCAL_TASKS_KEY);
+  const raw = localStorage.getItem(getTaskStorageKey());
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -124,7 +220,7 @@ function readLocalTaskHistory() {
 }
 
 function writeLocalTaskHistory(items) {
-  localStorage.setItem(LOCAL_TASKS_KEY, JSON.stringify(items));
+  localStorage.setItem(getTaskStorageKey(), JSON.stringify(items));
 }
 
 function renderTaskHistory(items) {
@@ -145,7 +241,7 @@ async function loadTaskHistory() {
   const { data, error } = await supabaseClient
     .from("task_history")
     .select("task_key,label,created_at")
-    .eq("device_id", deviceId)
+    .eq("device_id", getScopeId())
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -179,7 +275,7 @@ async function addTaskRecord(taskKey) {
 
   if (supabaseClient && supabaseReady) {
     const { error } = await supabaseClient.from("task_history").insert({
-      device_id: deviceId,
+      device_id: getScopeId(),
       task_key: taskKey,
       label: record.label
     });
@@ -190,13 +286,13 @@ async function addTaskRecord(taskKey) {
 }
 
 async function saveSetup(data) {
-  localStorage.setItem(LEGACY_SETUP_KEY, JSON.stringify(data));
+  localStorage.setItem(getSetupStorageKey(), JSON.stringify(data));
 
   if (!supabaseClient || !supabaseReady) return;
 
   const { error } = await supabaseClient.from("farm_profiles").upsert(
     {
-      device_id: deviceId,
+      device_id: getScopeId(),
       crop: data.crop,
       location: data.location,
       planting_date: data.plantingDate
@@ -211,7 +307,7 @@ async function loadSetup() {
     const { data, error } = await supabaseClient
       .from("farm_profiles")
       .select("crop,location,planting_date")
-      .eq("device_id", deviceId)
+      .eq("device_id", getScopeId())
       .maybeSingle();
 
     if (!error && data?.crop && data?.location && data?.planting_date) {
@@ -223,7 +319,7 @@ async function loadSetup() {
     }
   }
 
-  const saved = localStorage.getItem(LEGACY_SETUP_KEY);
+  const saved = localStorage.getItem(getSetupStorageKey());
   if (!saved) return null;
 
   try {
@@ -231,7 +327,7 @@ async function loadSetup() {
     if (!parsed.crop || !parsed.location || !parsed.plantingDate) return null;
     return parsed;
   } catch (_) {
-    localStorage.removeItem(LEGACY_SETUP_KEY);
+    localStorage.removeItem(getSetupStorageKey());
     return null;
   }
 }
@@ -658,6 +754,17 @@ setupForm.addEventListener("submit", async (e) => {
   await renderDashboard(data);
 });
 
+authForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = String(authEmail.value || "").trim();
+  if (!email) return;
+  await sendLoginLink(email);
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await logout();
+});
+
 editBtn.addEventListener("click", () => {
   dashboardPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
@@ -675,14 +782,6 @@ taskButtons.forEach((btn) => {
 });
 
 (async function bootstrap() {
-  await verifySupabaseConnection();
-  await refreshTaskHistory();
-
-  const data = await loadSetup();
-  if (!data) return;
-
-  document.getElementById("crop").value = data.crop;
-  document.getElementById("location").value = data.location;
-  document.getElementById("planting-date").value = data.plantingDate;
-  await renderDashboard(data);
+  await initAuth();
+  await reloadDataForCurrentScope();
 })();

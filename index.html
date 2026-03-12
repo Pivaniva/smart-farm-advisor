@@ -8,6 +8,17 @@
   </head>
   <body>
     <main class="app">
+      <section class="panel auth-panel" id="auth-panel">
+        <h2>ანგარიშით შესვლა</h2>
+        <p class="muted" id="auth-status">სტატუსი: სტუმარი რეჟიმი</p>
+        <form id="auth-form">
+          <label for="auth-email">ელ-ფოსტა</label>
+          <input id="auth-email" name="email" type="email" placeholder="მაგ.: farmer@example.com" required />
+          <button type="submit">შესვლის ლინკის გაგზავნა</button>
+        </form>
+        <button id="logout-btn" class="secondary hidden" type="button">გასვლა</button>
+      </section>
+
       <section class="panel" id="setup-panel">
         <h1>ჭკვიანი ფერმერის ასისტენტი</h1>
         <p class="muted">შეიყვანეთ კულტურის მონაცემები და მიიღეთ ყოველდღიური რეკომენდაციები.</p>

@@ -32,7 +32,7 @@ create index if not exists task_history_device_id_created_at_idx
 on public.task_history (device_id, created_at desc);
 ```
 
-## 3. Enable RLS and policy (basic MVP)
+## 3. Enable RLS, policy, and grants (basic MVP)
 Run:
 
 ```sql
@@ -50,15 +50,25 @@ on public.task_history
 for all
 using (true)
 with check (true);
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on table public.farm_profiles to anon, authenticated;
+grant select, insert, update, delete on table public.task_history to anon, authenticated;
+grant usage, select on sequence public.task_history_id_seq to anon, authenticated;
 ```
 
 Important: this is fine for demo/MVP only.
 
-## 4. Add project keys in app
+## 4. Turn on email auth
+1. Supabase -> `Authentication` -> `Providers` -> `Email`
+2. Keep `Email` enabled
+3. For production, configure your own SMTP later
+
+## 5. Add URL and keys in app
 1. Supabase -> `Project Settings` -> `API`
 2. Copy:
    - `Project URL`
-   - `anon public` key
+   - `publishable` (or `anon public`) key
 3. Put them in `app-config.js`:
 
 ```js
@@ -68,7 +78,13 @@ window.APP_CONFIG = {
 };
 ```
 
-## 5. Push and test
+## 6. Configure redirect URL for login link
+1. Supabase -> `Authentication` -> `URL Configuration`
+2. Add your site URL, for example:
+   - `https://pivaniva.github.io`
+   - `https://pivaniva.github.io/smart-farm-advisor/`
+
+## 7. Push and test
 ```bash
 git add .
 git commit -m "Enable Supabase cloud sync"
@@ -77,3 +93,7 @@ git push
 
 After deploy, dashboard should show `ქლაუდი (Supabase)` as data source.
 
+For login test:
+1. Enter email in app
+2. Open magic link from email
+3. Return to app and confirm status shows logged-in email
