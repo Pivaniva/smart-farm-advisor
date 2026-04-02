@@ -249,6 +249,24 @@
             <div id="crop-schedule" class="schedule-wrap"></div>
           </details>
 
+          <!-- Cost calculator -->
+          <details class="extra-advice" id="cost-details">
+            <summary>💰 ხარჯების კალკულატორი ▾</summary>
+            <div class="cost-wrap">
+              <p class="cost-disclaimer">⚠ ფასები სავარაუდოა — 2024-2025 წლის ქართული ბაზრის მიხედვით</p>
+              <div class="cost-size-row">
+                <label>ნაკვეთის ფართობი:</label>
+                <input id="calc-size" type="number" min="0.1" step="0.1" value="1" />
+                <span>ჰა</span>
+              </div>
+              <div id="cost-products"></div>
+              <div class="cost-total-row">
+                <span>სულ სავარაუდო ხარჯი:</span>
+                <strong id="cost-total">0 ₾</strong>
+              </div>
+            </div>
+          </details>
+
           <!-- Daily email -->
           <div class="email-notif-strip">
             <p class="auth-strip-title">📧 ყოველდღიური ელ-ფოსტის შეტყობინება</p>

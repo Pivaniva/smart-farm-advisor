@@ -1011,41 +1011,223 @@ const CROP_SCHEDULES = {
   ],
 };
 
+// ── Product price database (Georgian market 2024-2025) ────────────────────────
+// price = ₾ per package; coverageHa = ჰა per package
+const PRODUCT_PRICES = {
+  // ── ფუნგიციდები ──
+  ridomil:    { name: "რიდომილ გოლდი",  cat: "🍄 ფუნგიციდი",   price: 50,  unit: "შეფ. (400გ)", coverageHa: 0.4 },
+  score:      { name: "სკორი",           cat: "🍄 ფუნგიციდი",   price: 48,  unit: "100მლ",       coverageHa: 1   },
+  horus:      { name: "ჰორუსი",          cat: "🍄 ფუნგიციდი",   price: 40,  unit: "შეფ. (200გ)", coverageHa: 1   },
+  switch_:    { name: "სვიჩი",           cat: "🍄 ფუნგიციდი",   price: 65,  unit: "შეფ. (300გ)", coverageHa: 1   },
+  signum:     { name: "სიგნუმი",         cat: "🍄 ფუნგიციდი",   price: 75,  unit: "შეფ. (1კგ)",  coverageHa: 1   },
+  cuproxat:   { name: "კუპროქსატი",      cat: "🍄 ფუნგიციდი",   price: 45,  unit: "1ლ",          coverageHa: 1   },
+  polyram:    { name: "პოლირამი",        cat: "🍄 ფუნგიციდი",   price: 42,  unit: "შეფ. (1კგ)",  coverageHa: 1   },
+  bordeaux:   { name: "ბორდოს სითხე",   cat: "🍄 ფუნგიციდი",   price: 9,   unit: "1კგ",          coverageHa: 0.1 },
+  fitosporin: { name: "ფიტოსპორინი",    cat: "🍄 ფუნგიციდი",   price: 10,  unit: "შეფ.",         coverageHa: 0.5 },
+  trichoderm: { name: "ტრიქოდერმინი",   cat: "🍄 ფუნგიციდი",   price: 8,   unit: "შეფ.",         coverageHa: 0.5 },
+  // ── ინსექტიციდები ──
+  karate:     { name: "კარატე ზეონი",   cat: "🐛 ინსექტიციდი", price: 32,  unit: "შეფ. (1ლ)",   coverageHa: 1   },
+  confidor:   { name: "კონფიდორი",      cat: "🐛 ინსექტიციდი", price: 38,  unit: "შეფ. (1ლ)",   coverageHa: 1   },
+  mospilan:   { name: "მოსპილანი",      cat: "🐛 ინსექტიციდი", price: 35,  unit: "შეფ. (100გ)", coverageHa: 1   },
+  nomolt:     { name: "ნომოლტი",        cat: "🐛 ინსექტიციდი", price: 50,  unit: "50მლ",         coverageHa: 1   },
+  vertimec:   { name: "ვერტიმეკი",      cat: "🐛 ინსექტიციდი", price: 45,  unit: "500მლ",        coverageHa: 5   },
+  // ── სასუქები ──
+  nitramon:   { name: "ნიტრამონი",      cat: "🌱 სასუქი",      price: 1.5, unit: "1კგ",          coverageHa: 0.0067 }, // ~150კგ/ჰა
+  superph:    { name: "სუპერფოსფატი",   cat: "🌱 სასუქი",      price: 1.1, unit: "1კგ",          coverageHa: 0.01   }, // ~100კგ/ჰა
+  kaliumi:    { name: "კალიუმის სულფ.", cat: "🌱 სასუქი",      price: 2.4, unit: "1კგ",          coverageHa: 0.0125 }, // ~80კგ/ჰა
+  npk:        { name: "NPK 15-15-15",   cat: "🌱 სასუქი",      price: 1.8, unit: "1კგ",          coverageHa: 0.0067 }, // ~150კგ/ჰა
+  kristalon:  { name: "კრისტალონი",     cat: "🌱 სასუქი",      price: 12,  unit: "1კგ",          coverageHa: 0.33   }, // ~3კგ/ჰა
+  bori:       { name: "ბორი",           cat: "🌱 სასუქი",      price: 8,   unit: "100გ",          coverageHa: 0.67   }, // ~150გ/ჰა
+};
+
+// Map keywords in schedule text → product keys
+const PRODUCT_KEYWORDS = {
+  ridomil:    ["რიდომილ"],
+  score:      ["სკორი"],
+  horus:      ["ჰორუსი"],
+  switch_:    ["სვიჩი"],
+  signum:     ["სიგნუმი"],
+  cuproxat:   ["კუპროქსატი"],
+  polyram:    ["პოლირამი"],
+  bordeaux:   ["ბორდოს"],
+  fitosporin: ["ფიტოსპორინი"],
+  trichoderm: ["ტრიქოდერმინი"],
+  karate:     ["კარატე"],
+  confidor:   ["კონფიდორი"],
+  mospilan:   ["მოსპილანი"],
+  nomolt:     ["ნომოლტი"],
+  vertimec:   ["ვერტიმეკი"],
+  nitramon:   ["ნიტრამონი"],
+  superph:    ["სუპერფოსფ"],
+  kaliumi:    ["კალიუმ"],
+  npk:        ["NPK", "15-15-15"],
+  kristalon:  ["კრისტალ"],
+  bori:       ["ბორი"],
+};
+
+function detectProducts(text) {
+  const found = new Set();
+  for (const [key, words] of Object.entries(PRODUCT_KEYWORDS)) {
+    if (words.some(w => text.includes(w))) found.add(key);
+  }
+  return [...found];
+}
+
+const PRICES_CACHE_KEY = "smartFarmPricesCache";
+const PRICES_CACHE_DATE_KEY = "smartFarmPricesCacheDate";
+
+async function fetchProductPricesFromDB() {
+  const today = new Date().toISOString().slice(0, 10);
+  const cached = localStorage.getItem(PRICES_CACHE_KEY);
+  const cachedDate = localStorage.getItem(PRICES_CACHE_DATE_KEY);
+  if (cached && cachedDate === today) {
+    return JSON.parse(cached);
+  }
+
+  if (!supabaseClient || !supabaseReady) return null;
+  const { data, error } = await supabaseClient
+    .from("product_prices")
+    .select("key, name, category, price, unit, coverage_ha");
+  if (error || !data?.length) return null;
+
+  // Convert array → object keyed by product key
+  const prices = {};
+  data.forEach(row => {
+    prices[row.key] = {
+      name: row.name,
+      cat: row.category,
+      price: Number(row.price),
+      unit: row.unit,
+      coverageHa: Number(row.coverage_ha),
+    };
+  });
+
+  localStorage.setItem(PRICES_CACHE_KEY, JSON.stringify(prices));
+  localStorage.setItem(PRICES_CACHE_DATE_KEY, today);
+  return prices;
+}
+
+async function renderCostCalculator(crop, dayCount, farmSize) {
+  const container = document.getElementById("cost-products");
+  const totalEl   = document.getElementById("cost-total");
+  const sizeInput = document.getElementById("calc-size");
+  if (!container || !totalEl) return;
+
+  if (farmSize > 0 && sizeInput) sizeInput.value = farmSize;
+
+  // Fetch live prices; fall back to hardcoded
+  const livePrices = await fetchProductPricesFromDB();
+  const prices = livePrices || PRODUCT_PRICES;
+
+  // Show source in disclaimer
+  const disclaimer = document.querySelector(".cost-disclaimer");
+  if (disclaimer) {
+    const date = new Date().toLocaleDateString("ka-GE");
+    disclaimer.textContent = livePrices
+      ? `✅ ფასები განახლებულია Supabase-დან — ${date}`
+      : `⚠ სავარაუდო ფასები (2024-2025) — Supabase მიუწვდომელია`;
+  }
+
+  // Find current stage products
+  const rows = CROP_SCHEDULES[crop] || [];
+  const activeRow = rows.find(r => dayCount >= r.days[0] && dayCount < r.days[1]);
+  const stageText = activeRow
+    ? `${activeRow.fungicide} ${activeRow.insecticide} ${activeRow.fertilizer}`
+    : "";
+  const suggested = new Set(detectProducts(stageText));
+
+  // Group by category
+  const groups = {};
+  for (const [key, p] of Object.entries(prices)) {
+    if (!groups[p.cat]) groups[p.cat] = [];
+    groups[p.cat].push({ key, ...p, checked: suggested.has(key) });
+  }
+
+  const recalc = () => {
+    const ha = parseFloat(sizeInput?.value || "1") || 1;
+    let total = 0;
+    container.querySelectorAll(".cost-item input[type=checkbox]").forEach(cb => {
+      const key = cb.dataset.key;
+      const p = prices[key];
+      if (!p) return;
+      const units = Math.ceil(ha / p.coverageHa);
+      const rowTotal = Math.round(units * p.price);
+      const priceEl = cb.closest(".cost-item")?.querySelector(".cost-item-price");
+      const detailEl = cb.closest(".cost-item")?.querySelector(".cost-item-detail");
+      if (priceEl) priceEl.textContent = cb.checked ? `${rowTotal} ₾` : "—";
+      if (detailEl && cb.checked) detailEl.textContent = `${units} ${p.unit} × ${p.price} ₾`;
+      if (cb.checked) total += rowTotal;
+    });
+    totalEl.textContent = `${total} ₾`;
+  };
+
+  container.innerHTML = Object.entries(groups).map(([cat, items]) => `
+    <div class="cost-group">
+      <p class="cost-group-title">${cat}</p>
+      ${items.map(p => `
+        <label class="cost-item">
+          <input type="checkbox" data-key="${p.key}" ${p.checked ? "checked" : ""} />
+          <div class="cost-item-name">${p.name}</div>
+          <div>
+            <div class="cost-item-detail">${p.coverageHa < 0.05 ? `ფასი/კგ: ${p.price} ₾` : `${p.unit} → ${p.coverageHa} ჰა`}</div>
+            <div class="cost-item-price">—</div>
+          </div>
+        </label>`).join("")}
+    </div>`).join("");
+
+  container.querySelectorAll("input[type=checkbox]").forEach(cb =>
+    cb.addEventListener("change", recalc));
+  sizeInput?.addEventListener("input", recalc);
+  recalc();
+}
+
 function renderCropSchedule(crop, dayCount) {
   const container = document.getElementById("crop-schedule");
   if (!container) return;
 
   const rows = CROP_SCHEDULES[crop];
   if (!rows?.length) {
-    container.innerHTML = `<p style="padding:12px;color:var(--muted);font-size:.85rem;">ამ კულტურისთვის სქემა მალე დაემატება.</p>`;
+    container.innerHTML = `<p class="sched-empty">ამ კულტურისთვის სქემა მალე დაემატება.</p>`;
     return;
   }
 
   const activeIdx = rows.findIndex(r => dayCount >= r.days[0] && dayCount < r.days[1]);
 
-  const thead = `<thead><tr>
-    <th>ზრდის ფაზა</th>
-    <th>ფუნგიციდი</th>
-    <th>ინსექტიციდი</th>
-    <th>სასუქი</th>
-    <th>შენიშვნა</th>
-  </tr></thead>`;
-
-  const tbody = rows.map((r, i) => {
+  container.innerHTML = rows.map((r, i) => {
     const active = i === activeIdx;
-    const stageCell = active
-      ? `${r.stage} <span class="schedule-active-label">▶ ახლა</span>`
-      : r.stage;
-    return `<tr class="${active ? "schedule-row--active" : ""}">
-      <td>${stageCell}<div class="sched-note">${r.days[0]}–${r.days[1]} დღე</div></td>
-      <td>${r.fungicide}</td>
-      <td>${r.insecticide}</td>
-      <td>${r.fertilizer}</td>
-      <td>${r.notes || "—"}</td>
-    </tr>`;
+    const noInsect = r.insecticide === "საჭირო არ არის" || r.insecticide === "—";
+    const noNotes  = !r.notes || r.notes === "—";
+    return `
+    <div class="sched-card ${active ? "sched-card--active" : ""}">
+      <div class="sched-card-header">
+        <div class="sched-header-left">
+          <span class="sched-stage-name">${r.stage}</span>
+          <span class="sched-days">${r.days[0]}–${r.days[1]} დღე</span>
+        </div>
+        ${active ? `<span class="sched-now-badge">▶ ახლა</span>` : ""}
+      </div>
+      <div class="sched-card-body">
+        <div class="sched-row">
+          <span class="sched-icon">🍄</span>
+          <div><p class="sched-lbl">ფუნგიციდი</p><p class="sched-val">${r.fungicide}</p></div>
+        </div>
+        ${!noInsect ? `
+        <div class="sched-row">
+          <span class="sched-icon">🐛</span>
+          <div><p class="sched-lbl">ინსექტიციდი</p><p class="sched-val">${r.insecticide}</p></div>
+        </div>` : ""}
+        <div class="sched-row">
+          <span class="sched-icon">🌱</span>
+          <div><p class="sched-lbl">სასუქი</p><p class="sched-val">${r.fertilizer}</p></div>
+        </div>
+        ${!noNotes ? `
+        <div class="sched-row sched-row--note">
+          <span class="sched-icon">💡</span>
+          <div><p class="sched-lbl">შენიშვნა</p><p class="sched-val">${r.notes}</p></div>
+        </div>` : ""}
+      </div>
+    </div>`;
   }).join("");
-
-  container.innerHTML = `<table class="schedule-table">${thead}<tbody>${tbody}</tbody></table>`;
 }
 
 // ── Frost sensitivity thresholds per crop (°C) ──────────────────────────────
@@ -1429,6 +1611,7 @@ async function renderDashboard(data) {
 
   renderForecast(weather.forecast, data.crop);
   renderCropSchedule(data.crop, dayCount);
+  void renderCostCalculator(data.crop, dayCount, data.farmSize || 1);
 
   // ── Forecast danger alerts ──
   const forecastAlerts = checkForecastAlerts(data.crop, weather.forecast);

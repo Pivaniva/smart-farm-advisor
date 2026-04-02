@@ -782,64 +782,200 @@ input::placeholder { color: var(--muted-2); }
   line-height: 1.6;
 }
 
-/* Crop protection schedule */
-.schedule-wrap {
-  padding: 0 4px 16px;
-  overflow-x: auto;
+/* ── Crop protection schedule cards ─────────────────────────────────────── */
+.schedule-wrap { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.sched-empty { font-size: .875rem; color: var(--muted); padding: 4px 0; }
+
+.sched-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  overflow: hidden;
 }
 
-.schedule-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .8rem;
-  margin-top: 8px;
+.sched-card--active {
+  border-color: var(--green-700);
+  box-shadow: 0 0 0 2px #bbf7d0;
 }
 
-.schedule-table th {
-  background: var(--green-800);
-  color: #fff;
-  font-weight: 600;
-  padding: 8px 10px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.schedule-table td {
-  padding: 8px 10px;
+.sched-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--green-50);
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
-  line-height: 1.5;
-  color: var(--ink-2);
+  gap: 8px;
 }
 
-.schedule-table tr:last-child td { border-bottom: none; }
+.sched-card--active .sched-card-header {
+  background: var(--green-800);
+}
 
-.schedule-table tr.schedule-row--active td {
-  background: #f0fdf4;
+.sched-header-left { display: flex; flex-direction: column; gap: 2px; }
+
+.sched-stage-name {
+  font-size: .875rem;
+  font-weight: 700;
   color: var(--ink);
-  font-weight: 500;
 }
 
-.schedule-row--active .stage-badge {
-  background: var(--green-700);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 99px;
+.sched-card--active .sched-stage-name { color: #fff; }
+
+.sched-days {
   font-size: .72rem;
-  white-space: nowrap;
+  color: var(--muted);
 }
 
-.schedule-active-label {
-  font-size: .68rem;
-  background: var(--green-700);
-  color: #fff;
-  padding: 1px 6px;
+.sched-card--active .sched-days { color: #bbf7d0; }
+
+.sched-now-badge {
+  background: #fff;
+  color: var(--green-800);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 3px 10px;
   border-radius: 99px;
-  margin-left: 6px;
-  vertical-align: middle;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.sched-note { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.sched-card-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.sched-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sched-row--note { opacity: .85; }
+
+.sched-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+.sched-lbl {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 1px;
+}
+
+.sched-val {
+  font-size: .85rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* ── Cost calculator ─────────────────────────────────────────────────────── */
+.cost-wrap { padding: 14px 16px 18px; }
+
+.cost-disclaimer {
+  font-size: .78rem;
+  padding: 7px 12px;
+  border-radius: var(--r-xs);
+  margin-bottom: 14px;
+  border-left: 3px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.cost-disclaimer.ok {
+  border-color: var(--green-600);
+  background: #f0fdf4;
+  color: var(--green-800);
+}
+
+.cost-size-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cost-size-row input {
+  width: 72px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: .9rem;
+  font-family: inherit;
+}
+
+.cost-group { margin-bottom: 18px; }
+
+.cost-group-title {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.cost-item {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.cost-item:last-child { border-bottom: none; }
+.cost-item:hover { background: var(--green-50); border-radius: var(--r-xs); }
+
+.cost-item input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--green-700);
+  cursor: pointer;
+}
+
+.cost-item-name {
+  font-size: .875rem;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.cost-item-detail {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.cost-item-price {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--green-800);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cost-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding: 12px 14px;
+  background: var(--green-800);
+  border-radius: var(--r-sm);
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+}
+
+#cost-total {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+}
 
 /* History */
 .history-wrap { display: flex; flex-direction: column; }
