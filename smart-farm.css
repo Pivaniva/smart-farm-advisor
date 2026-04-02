@@ -29,7 +29,8 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+body { overflow-x: hidden; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
@@ -1340,22 +1341,27 @@ input::placeholder { color: var(--muted-2); }
   #cost-details > summary { padding: 14px 16px; font-size: .9rem; }
 }
 
-/* Chat panel: full-width on phones */
+/* Chat panel: full-width bottom-sheet on phones */
 @media (max-width: 600px) {
   .chat-panel {
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-    max-height: 82vh;
+    max-height: 88dvh;
     border-radius: var(--r) var(--r) 0 0;
     border-left: none;
     border-right: none;
     border-bottom: none;
   }
 
+  /* Safe area padding for notched phones (iPhone, etc.) */
+  .chat-input-row {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
   .chat-toggle {
-    bottom: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
     right: 16px;
     width: 52px;
     height: 52px;

@@ -2156,17 +2156,23 @@ function appendBubble(text, role) {
   return div;
 }
 
+function isMobile() { return window.innerWidth <= 600; }
+
 chatToggle.addEventListener("click", async () => {
   const wasHidden = chatPanel.classList.contains("hidden");
   chatPanel.classList.toggle("hidden");
   if (wasHidden) {
+    if (isMobile()) chatToggle.classList.add("hidden");
     chatMessages.innerHTML = '<div class="chat-bubble bot">გამარჯობა! დამისვი კითხვა შენი ნაკვეთის შესახებ.</div>';
     await renderChatHistory();
     chatInput.focus();
   }
 });
 
-chatClose.addEventListener("click", () => chatPanel.classList.add("hidden"));
+chatClose.addEventListener("click", () => {
+  chatPanel.classList.add("hidden");
+  chatToggle.classList.remove("hidden");
+});
 
 async function sendChatRequest(message, imageBase64) {
   const submitBtn = chatForm.querySelector("button[type='submit']");
