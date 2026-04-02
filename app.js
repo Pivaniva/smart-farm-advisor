@@ -886,238 +886,19 @@ function weatherCodeToEmoji(code) {
   return "🌤️";
 }
 
-// ── Crop protection & nutrition schedules ────────────────────────────────────
-// Source: Georgian MoA recommendations, LEPL Scientific Research Centre of Agriculture
-// Each row: { stage, days, fungicide, insecticide, fertilizer, notes }
-const CROP_SCHEDULES = {
-  tomato: [
-    { stage: "ჩითილი / გადარგვა",   days: [0, 25],    fungicide: "ფიტოსპორინი (ფესვების დამუშავება)", insecticide: "—", fertilizer: "სუპერფოსფატი (სტარტერი)", notes: "გადარგვამდე ნიადაგი ტრიქოდერმინით დაამუშავეთ" },
-    { stage: "ვეგეტაცია",            days: [25, 50],   fungicide: "კუპროქსატი (პროფილაქტიკური)", insecticide: "კონფიდორი (ბუგრის წინ.)", fertilizer: "NPK 15-15-15 + მიკრო", notes: "7-10 დღეში ერთხელ დათვალიერება" },
-    { stage: "ყვავილობა",            days: [50, 75],   fungicide: "სკორი (ნაცრის წინ.) / სიგნუმი", insecticide: "კარატე ზეონი (საჭიროებისამ.)", fertilizer: "ბორი + კალიუმი (ფოთლოვანი)", notes: "ყვავილობისას შეწამვლა დილით ან საღამოს" },
-    { stage: "ნაყოფის შეკვრა",       days: [75, 100],  fungicide: "რიდომილ გოლდი (ფიტოფტ. წინ.)", insecticide: "ვერტიმეკი (ტკიპის წინ.)", fertilizer: "კალიუმის სულფატი — გაიზარდეთ", notes: "ფიტოფტოროზის მონიტორინგი ყოველდღე" },
-    { stage: "მოსავლის მომწიფება",   days: [100, 140], fungicide: "სვიჩი (ნაცრის/სიდამ. წინ.)", insecticide: "—", fertilizer: "მინიმუმამდე შეამცირეთ", notes: "მოსავლამდე 7-14 დღე — შეწამვლა შეწყვიტეთ" },
-  ],
-  pepper: [
-    { stage: "ჩითილი / გადარგვა",   days: [0, 30],    fungicide: "ფიტოსპორინი", insecticide: "—", fertilizer: "სტარტ. NPK (ფოსფ.)", notes: "ფიტოფტოროზის საწინააღმდეგო ნიადაგი" },
-    { stage: "ვეგეტაცია",            days: [30, 60],   fungicide: "კუპროქსატი 10 დღეში ერთხელ", insecticide: "კონფიდორი", fertilizer: "NPK 15-15-15", notes: "" },
-    { stage: "ყვავილობა",            days: [60, 85],   fungicide: "სკორი / სიგნუმი", insecticide: "კარატე ზეონი", fertilizer: "ბორი + კალიუმი", notes: "ბოტრიტისის კონტროლი მნიშვნელოვანია" },
-    { stage: "ნაყოფის ზრდა",         days: [85, 120],  fungicide: "რიდომილ გოლდი", insecticide: "—", fertilizer: "K-ის გაზრდა", notes: "პიკზე მორწყვის სტაბილურობა" },
-    { stage: "მოსავალი",             days: [120, 160], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "მოსავლამდე 10 დღე — პესტ. შეჩერება" },
-  ],
-  cucumber: [
-    { stage: "გაღივება",             days: [0, 15],    fungicide: "ტრიქოდერმინი (ნიადაგი)", insecticide: "—", fertilizer: "NPK სტარტ.", notes: "" },
-    { stage: "ვეგეტაცია",            days: [15, 35],   fungicide: "კუპროქსატი", insecticide: "კონფიდორი", fertilizer: "NPK 15-15-15", notes: "ჭრაქის პროფილაქტიკა ტენიანობისას" },
-    { stage: "ყვავილობა",            days: [35, 55],   fungicide: "რიდომილ გოლდი (ჭრაქი)", insecticide: "ვერტიმეკი", fertilizer: "ბორი + კალ.", notes: "ფუტკრები — შეწამვლა მხოლოდ საღამოს" },
-    { stage: "მოსავალი",             days: [55, 90],   fungicide: "ჰორუსი (ნაცარი)", insecticide: "—", fertilizer: "კალ. სულფ.", notes: "7 დღე ადრე — ქიმ. შეჩერება" },
-  ],
-  tomato_field: [],
-  potato: [
-    { stage: "გამოღივება",           days: [0, 25],    fungicide: "ფიტოსპორინი (ტუბერი)", insecticide: "კონფიდორი (ხოჭო)", fertilizer: "NPK სტარტ.", notes: "ტუბერის წინასწარ დამუშავება" },
-    { stage: "ვეგეტაცია",            days: [25, 50],   fungicide: "პოლირამი (ფიტოფტ. პროფ.)", insecticide: "კარატე ზეონი (კოლ. ხოჭო)", fertilizer: "NPK 15-15-15 + Ca", notes: "კოლორადოს ხოჭოს ყოველდღე თვალყური" },
-    { stage: "ტუბ. წარმოქ.",         days: [50, 75],   fungicide: "რიდომილ გოლდი", insecticide: "—", fertilizer: "კალიუმის გაზრდა", notes: "ფიტოფტოროზის მაღალი სეზონი" },
-    { stage: "სიმწიფე",              days: [75, 110],  fungicide: "სკორი", insecticide: "—", fertilizer: "შეამცირეთ", notes: "მოსავ. 14 დღე ადრე — ქიმ. შეჩ." },
-  ],
-  maize: [
-    { stage: "გაღივება",             days: [0, 20],    fungicide: "ფიტოსპორინი (თესლი)", insecticide: "—", fertilizer: "NPK 10-20-20 სტარტ.", notes: "თესლის დამუშავება სავალდებულოა" },
-    { stage: "ვეგეტაცია (3-6 ფოთ.)", days: [20, 45],   fungicide: "—", insecticide: "კარატე (ჭიების წინ.)", fertilizer: "ნიტრამონი (N 1-ლი)", notes: "ჰერბიციდი — 3-4 ფოთლის ფაზაში" },
-    { stage: "ძლიერი ზრდა",          days: [45, 70],   fungicide: "სკორი (ჟანგი/ჰელმ.)", insecticide: "ნომოლტი (ღეროს ჭია)", fertilizer: "ნიტრამონი (N 2-ე)", notes: "ღეროს ჭია — ყველაზე სახიფათო" },
-    { stage: "ყვავილობა",            days: [70, 90],   fungicide: "—", insecticide: "—", fertilizer: "კალიუმი + ბორი", notes: "შეწამვლა ყვავილობისას არ შეიძლება" },
-    { stage: "მარცვლის ფორმ.",       days: [90, 120],  fungicide: "—", insecticide: "—", fertilizer: "—", notes: "მორწყვა კრიტიკულია ამ ფაზაში" },
-  ],
-  wheat: [
-    { stage: "გაღივება",             days: [0, 30],    fungicide: "თესლის პრეპ. (TMTD)", insecticide: "—", fertilizer: "NPK სტარტ.", notes: "თესლის გაprotection სავალდ." },
-    { stage: "კოკრიანობა",           days: [30, 80],   fungicide: "სკორი (სეპტ./ჟანგი)", insecticide: "—", fertilizer: "N ტოპდრ. (ნიტრ.)", notes: "გაზაფხულის N — ყველაზე მნიშვნ." },
-    { stage: "ღეროს ზრდა",           days: [80, 120],  fungicide: "სკორი / სიგნუმი", insecticide: "კარატე (ბუგ./ტრიფ.)", fertilizer: "N 2-ე დოზა", notes: "ჟანგის მონიტორინგი ყოველ 5 დღეში" },
-    { stage: "ყვავილობა",            days: [120, 145], fungicide: "სიგნუმი (ფუზ. წინ.)", insecticide: "—", fertilizer: "—", notes: "ყვავ. ფაზა — ფუზარიოზის კრიტ. დრო" },
-    { stage: "სიმწიფე",              days: [145, 200], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "14+ დღე — ქიმ. შეჩ." },
-  ],
-  vine: [
-    { stage: "კვირტის გაშლა",        days: [0, 20],    fungicide: "ბორდოს სითხე (1%)", insecticide: "—", fertilizer: "N (გაშლამდე)", notes: "ჭრაქის/ნაცრის სეზ. გახსნა" },
-    { stage: "5-6 ფოთ. / ყლ. ზრდა", days: [20, 50],   fungicide: "პოლირამი + სკორი", insecticide: "კარატე (ყლ. ჭია)", fertilizer: "NPK ბალ.", notes: "ჭრაქი + ნაცარი — ორივე ერთდ." },
-    { stage: "ყვ. წინ / ყვავ.",      days: [50, 70],   fungicide: "ჰორუსი + რიდ. გოლდი", insecticide: "ნომოლტი (Lobesia)", fertilizer: "ბორი (ყვავ.)", notes: "ყვავ. — ქიმ. მინ., ბოტრ. პროფ." },
-    { stage: "მარცვლ. შეკვ.",        days: [70, 100],  fungicide: "სვიჩი / სიგნუმი (ბოტრ.)", insecticide: "—", fertilizer: "K + Ca", notes: "" },
-    { stage: "მომწიფება",            days: [100, 140], fungicide: "სვიჩი (სიდამ.)", insecticide: "—", fertilizer: "K გამ.", notes: "მოსავ. 21 დღე — ქიმ. შეჩ." },
-    { stage: "შემოდგ. / ჭრა",        days: [140, 200], fungicide: "ბორდ. სითხე (ჭრის შემდ.)", insecticide: "—", fertilizer: "—", notes: "ჭრის ჭრილობების დამუშავება" },
-  ],
-  apple: [
-    { stage: "კვ. გაშ. / ყვ. წინ",  days: [0, 30],    fungicide: "სკორი + კუპ.", insecticide: "—", fertilizer: "N სტარტ.", notes: "ქეცი — სეზ. პირვ. შეწამვლა" },
-    { stage: "ყვავილობა",            days: [30, 45],   fungicide: "ჰორუსი (ნაცარი)", insecticide: "—", fertilizer: "ბორი", notes: "ქიმ. მინ. — ფუტკრები" },
-    { stage: "ნაყ. ჩამ. / ზრდა",     days: [45, 90],   fungicide: "სკორი (ქეცი / ნაც.)", insecticide: "კარატე (ვაშ. ჭია)", fertilizer: "NPK + Ca", notes: "7-10 დღეში ქეცის მონიტ." },
-    { stage: "ნაყ. მომწ.",           days: [90, 140],  fungicide: "სიგნუმი (სიდამ.)", insecticide: "—", fertilizer: "K ნაყ.", notes: "14 დღე — ქიმ. შეჩ." },
-  ],
-  peach: [
-    { stage: "კვ. გაშ. (ადრე)",      days: [0, 20],    fungicide: "ბორდ. სითხე / კუპ.", insecticide: "—", fertilizer: "N (ადრე)", notes: "ხვ. ფოთ. — სეზ. 1-ლი შეწამ." },
-    { stage: "ყვავილობა",            days: [20, 35],   fungicide: "ჰორუსი", insecticide: "—", fertilizer: "ბორი", notes: "მინ. ქიმ." },
-    { stage: "ნაყ. ზრდა",            days: [35, 80],   fungicide: "სკორი (ნაც.) + სიგნ.", insecticide: "კარ. ზეონი", fertilizer: "NPK + K", notes: "კლასტ. (ნახვ. ფოთ.) — სკ./კუპ." },
-    { stage: "მომწიფება",            days: [80, 120],  fungicide: "სვიჩი (მონ.)", insecticide: "—", fertilizer: "K", notes: "14 დღე — ქიმ. შეჩ." },
-  ],
-  strawberry: [
-    { stage: "გაშვ. / ვეგ.",         days: [0, 30],    fungicide: "ჰორუსი (ნაცარი)", insecticide: "ვერტ. (ტკიპა)", fertilizer: "NPK + Ca", notes: "ნაცარი — ყველ. ტენ. ფაზაში" },
-    { stage: "ყვავილობა",            days: [30, 55],   fungicide: "სვიჩი (ბოტრ.)", insecticide: "—", fertilizer: "ბორი + K", notes: "ბოტრ. — ყველ. კრიტ. საფრ." },
-    { stage: "მოსავალი",             days: [55, 90],   fungicide: "სიგნუმი", insecticide: "—", fertilizer: "K", notes: "5 დღე — ქიმ. შეჩ." },
-  ],
-  sunflower: [
-    { stage: "გაღივება",             days: [0, 20],    fungicide: "ფიტოსპ. (თესლი)", insecticide: "—", fertilizer: "NPK სტარტ.", notes: "" },
-    { stage: "ვეგეტაცია",            days: [20, 55],   fungicide: "სკორი (ფომ./ჟანგი)", insecticide: "კარ. ზეონი", fertilizer: "N 1-ლი + ბ.", notes: "ჭრაქი — ადრ. ფაზ. კრიტ." },
-    { stage: "კვ. წარმ.",            days: [55, 85],   fungicide: "სიგნ. (სკლ./ბოტ.)", insecticide: "—", fertilizer: "K + P", notes: "სკლეროტინია — ყველ. საფ." },
-    { stage: "მომწ.",                days: [85, 115],  fungicide: "—", insecticide: "—", fertilizer: "—", notes: "" },
-  ],
-  watermelon: [
-    { stage: "გაღივება",             days: [0, 20],    fungicide: "ტრიქ. (ნიადაგი)", insecticide: "—", fertilizer: "P სტარტ.", notes: "" },
-    { stage: "ვეგეტ.",               days: [20, 45],   fungicide: "რიდ. გოლდი (ჭრაქი)", insecticide: "კონფ.", fertilizer: "NPK", notes: "ჭრაქი — ძირ. საფრ." },
-    { stage: "ყვ. / ნაყ. ზრდა",     days: [45, 75],   fungicide: "სკორი (ანთრ.)", insecticide: "ვერტ.", fertilizer: "K + Ca", notes: "" },
-    { stage: "მომწ.",                days: [75, 110],  fungicide: "—", insecticide: "—", fertilizer: "K", notes: "10 დღე — ქიმ. შეჩ." },
-  ],
-  bean: [
-    { stage: "გაღივება",             days: [0, 15],    fungicide: "ფიტოსპ.", insecticide: "—", fertilizer: "P + Rhizobium", notes: "ბაქტ. სასუქი ფესვ. კვ." },
-    { stage: "ვეგეტ.",               days: [15, 40],   fungicide: "სკორი (ჟ./ანთ.)", insecticide: "კარ. ზ.", fertilizer: "NPK მცირე", notes: "" },
-    { stage: "ყვ. / პარკი",          days: [40, 70],   fungicide: "კუპ. (ბაქ.)", insecticide: "—", fertilizer: "K", notes: "" },
-    { stage: "სიმწ.",                days: [70, 100],  fungicide: "—", insecticide: "—", fertilizer: "—", notes: "" },
-  ],
-  cabbage: [
-    { stage: "ჩით. / გადარ.",        days: [0, 25],    fungicide: "ფიტოსპ.", insecticide: "—", fertilizer: "P სტ.", notes: "" },
-    { stage: "ვეგეტ.",               days: [25, 60],   fungicide: "რიდ. გ. (ჭრ.)", insecticide: "ნომ. (პეპ.)", fertilizer: "N 1-ლი", notes: "კომბ. პეპ. ლარვ. — ვიზ. კ." },
-    { stage: "ქამ. წარ.",            days: [60, 100],  fungicide: "სკ. (ალტ.)", insecticide: "კარ. ზ.", fertilizer: "K + Ca", notes: "" },
-    { stage: "მოსავ.",               days: [100, 130], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "14 დღე — ქიმ. შეჩ." },
-  ],
-  onion: [
-    { stage: "გაღ. / ადრ.",          days: [0, 30],    fungicide: "ფიტოსპ.", insecticide: "—", fertilizer: "NPK სტ.", notes: "" },
-    { stage: "ვეგეტ.",               days: [30, 70],   fungicide: "რიდ. გ. (ჭრ.)", insecticide: "კონფ. (ტრ.)", fertilizer: "N + K", notes: "ჭრაქი — ძირ. საფ." },
-    { stage: "ბოლქ. ფ.",             days: [70, 100],  fungicide: "სკ.", insecticide: "—", fertilizer: "K გ.", notes: "" },
-    { stage: "სიმწ.",                days: [100, 130], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "10 დღე — ქ. შეჩ." },
-  ],
-  garlic: [
-    { stage: "გაღ.",                  days: [0, 40],    fungicide: "ფიტ.", insecticide: "—", fertilizer: "P სტ.", notes: "ნიადაგი ტრიქ." },
-    { stage: "ვეგეტ.",               days: [40, 90],   fungicide: "რ. გ. (ჭრ.)", insecticide: "—", fertilizer: "N + K", notes: "" },
-    { stage: "სიმწ.",                days: [90, 130],  fungicide: "—", insecticide: "—", fertilizer: "—", notes: "" },
-  ],
-  carrot: [
-    { stage: "გაღ.",                  days: [0, 25],    fungicide: "ტრიქ.", insecticide: "—", fertilizer: "P სტ.", notes: "" },
-    { stage: "ვეგეტ.",               days: [25, 70],   fungicide: "სკ. (ალტ.)", insecticide: "კ. ზ. (ჭ.)", fertilizer: "N + K", notes: "" },
-    { stage: "ფ. ზრდა",             days: [70, 110],  fungicide: "სიგ.", insecticide: "—", fertilizer: "K", notes: "" },
-    { stage: "მოს.",                 days: [110, 150], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "" },
-  ],
-  rice: [
-    { stage: "გაღ.",                  days: [0, 25],    fungicide: "ტრიქ.", insecticide: "—", fertilizer: "N სტ.", notes: "წყლის სტ. შ." },
-    { stage: "ვეგ.",                  days: [25, 60],   fungicide: "სკ. (ბლ.)", insecticide: "კ. ზ.", fertilizer: "N 2-ე", notes: "ბლასტი — ძ. საფ." },
-    { stage: "ყვ. / ჩ.",             days: [60, 90],   fungicide: "სიგ.", insecticide: "—", fertilizer: "K", notes: "" },
-    { stage: "სიმწ.",                days: [90, 130],  fungicide: "—", insecticide: "—", fertilizer: "—", notes: "" },
-  ],
-  nuts: [
-    { stage: "კვ. გაშ.",             days: [0, 30],    fungicide: "ბ. სითხე 1%", insecticide: "—", fertilizer: "N გაშ.", notes: "ბაქტ. — ადრ. სეზ. მ." },
-    { stage: "ფოთ. ზ. / ყვ.",        days: [30, 70],   fungicide: "კუპ. (ბ. / ანთ.)", insecticide: "კ. ზ. (ჭ.)", fertilizer: "NPK ბ.", notes: "2 კვ. ერთხ. შეწ." },
-    { stage: "ნაყ. ფ.",              days: [70, 120],  fungicide: "სკ. (ნაც.)", insecticide: "—", fertilizer: "K + Ca", notes: "" },
-    { stage: "სიმწ.",                days: [120, 180], fungicide: "—", insecticide: "—", fertilizer: "—", notes: "21 დღე — ქ. შ." },
-  ],
-};
-
-function renderCropSchedule(crop, dayCount) {
-  const container = document.getElementById("crop-schedule");
-  if (!container) return;
-
-  const rows = CROP_SCHEDULES[crop];
-  if (!rows?.length) {
-    container.innerHTML = `<p style="padding:12px;color:var(--muted);font-size:.85rem;">ამ კულტურისთვის სქემა მალე დაემატება.</p>`;
-    return;
-  }
-
-  const activeIdx = rows.findIndex(r => dayCount >= r.days[0] && dayCount < r.days[1]);
-
-  const thead = `<thead><tr>
-    <th>ზრდის ფაზა</th>
-    <th>ფუნგიციდი</th>
-    <th>ინსექტიციდი</th>
-    <th>სასუქი</th>
-    <th>შენიშვნა</th>
-  </tr></thead>`;
-
-  const tbody = rows.map((r, i) => {
-    const active = i === activeIdx;
-    const stageCell = active
-      ? `${r.stage} <span class="schedule-active-label">▶ ახლა</span>`
-      : r.stage;
-    return `<tr class="${active ? "schedule-row--active" : ""}">
-      <td>${stageCell}<div class="sched-note">${r.days[0]}–${r.days[1]} დღე</div></td>
-      <td>${r.fungicide}</td>
-      <td>${r.insecticide}</td>
-      <td>${r.fertilizer}</td>
-      <td>${r.notes || "—"}</td>
-    </tr>`;
-  }).join("");
-
-  container.innerHTML = `<table class="schedule-table">${thead}<tbody>${tbody}</tbody></table>`;
-}
-
-// ── Frost sensitivity thresholds per crop (°C) ──────────────────────────────
-const FROST_THRESHOLDS = {
-  tomato: 2, pepper: 2, cucumber: 2, watermelon: 2, bean: 2, rice: 2,
-  maize: 0, sunflower: 0, vine: 0, strawberry: -1, peach: -1,
-  potato: -1, cabbage: -2, onion: -2, garlic: -2,
-  carrot: -3, apple: -3, nuts: -3, wheat: -5,
-};
-
-function checkForecastAlerts(crop, forecast) {
-  if (!forecast?.length) return [];
-  const alerts = [];
-  const frostLimit = FROST_THRESHOLDS[crop] ?? 0;
-  const dayLabels = ["კვი", "ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
-
-  forecast.slice(0, 7).forEach((day, i) => {
-    const label = i === 0 ? "დღეს" : i === 1 ? "ხვალ" : dayLabels[new Date(day.date).getDay()];
-
-    if (day.minC <= frostLimit + 2) {
-      const critical = day.minC <= frostLimit;
-      alerts.push({
-        type: "frost", critical, dayIndex: i, label,
-        text: `❄️ ${label}: ყინვის ${critical ? "საფრთხე" : "რისკი"}! მინ. ${Math.round(day.minC)}°C`,
-      });
-    }
-    if (day.code === 96 || day.code === 99) {
-      alerts.push({
-        type: "hail", critical: true, dayIndex: i, label,
-        text: `⛈️ ${label}: სეტყვა მოსალოდნელია! ნაკვეთი შეამოწმეთ.`,
-      });
-    }
-    if (day.maxC >= 35) {
-      alerts.push({
-        type: "heat", critical: day.maxC >= 40, dayIndex: i, label,
-        text: `🌡️ ${label}: სითბური სტრესი! მაქს. ${Math.round(day.maxC)}°C — მორწყვა გაზარდეთ.`,
-      });
-    }
-    if (day.rainMm >= 30) {
-      alerts.push({
-        type: "rain", critical: false, dayIndex: i, label,
-        text: `🌧️ ${label}: ძლიერი წვიმა (${Math.round(day.rainMm)}მმ) — სოკოვანი დაავადების რისკი გაიზრდება.`,
-      });
-    }
-  });
-
-  return alerts;
-}
-
-function renderForecast(forecast, crop) {
+function renderForecast(forecast) {
   const container = document.getElementById("forecast-strip");
   if (!container || !forecast?.length) return;
 
   const days = ["კვი", "ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
-  const alerts = checkForecastAlerts(crop, forecast);
-  const alertsByDay = {};
-  alerts.forEach(a => { alertsByDay[a.dayIndex] = a; });
 
   container.innerHTML = forecast.slice(0, 7).map((day, i) => {
     const date = new Date(day.date);
     const label = i === 0 ? "დღეს" : days[date.getDay()];
-    const alert = alertsByDay[i];
-    const alertClass = alert
-      ? alert.critical ? "forecast-day--danger" : "forecast-day--warn"
-      : "";
-    const alertIcon = alert
-      ? `<span class="forecast-alert-icon">${alert.type === "frost" ? "❄️" : alert.type === "hail" ? "⛈️" : alert.type === "heat" ? "🌡️" : "🌧️"}</span>`
-      : "";
     return `
-      <div class="forecast-day ${alertClass}" title="${alert ? alert.text : ""}">
+      <div class="forecast-day">
         <span class="forecast-label">${label}</span>
-        <span class="forecast-icon">${alertIcon || weatherCodeToEmoji(day.code)}</span>
+        <span class="forecast-icon">${weatherCodeToEmoji(day.code)}</span>
         <span class="forecast-temp">${Math.round(day.maxC)}°</span>
         <span class="forecast-min">${Math.round(day.minC)}°</span>
         ${day.rainMm > 0 ? `<span class="forecast-rain">💧${Math.round(day.rainMm)}მმ</span>` : '<span class="forecast-rain"></span>'}
@@ -1157,52 +938,14 @@ function getStageByGdd(crop, gdd) {
   return config.stages.find((s) => gdd <= s.maxGdd)?.stage || "უცნობია";
 }
 
-function buildAdvice(crop, dayCount, weather, farmSize, soilType, irrigationType) {
+function buildAdvice(crop, dayCount, weather, farmSize) {
   const stage = getStage(crop, dayCount);
 
-  // Map Georgian soil types to watering categories
-  // "heavy" = slow drainage (clay-like): bicsobi, ruxikavisf, tsiteli, kiteli
-  // "light" = fast drainage (sandy/porous): aluviari (variable — treat as medium)
-  // "medium" = everything else
-  const soilWaterCat =
-    ["bicsobi", "ruxikavisf"].includes(soilType) ? "heavy" :
-    ["kiteli", "tsiteli"].includes(soilType) ? "heavy" :
-    soilType === "aluviari" ? "medium" : "medium";
-
-  const rainThreshold = soilWaterCat === "heavy" ? 12 : 8;
-  const heatThreshold = 30;
-
-  const irrigSuffix = irrigationType === "drip"
-    ? " წვეთოვანი სისტემა — ფესვთა ზონაში ნელი, ზომიერი კვება."
-    : irrigationType === "furrow"
-    ? " კვლებში მორწყვა — ღარები ბოლომდე გაავსეთ, ნიადაგი კარგად გაჯერდეს."
-    : irrigationType === "flood"
-    ? " დატბორვით — ნიადაგი თანაბრად დასველდეს; ბრინჯისთვის მუდმივი ფენა შეინარჩუნეთ."
-    : irrigationType === "sprinkler"
-    ? " დაწვიმებით — დილის 7-10 საათს შორის ჩართეთ; ფოთელი დღის სიცხეში არ დასველდეს."
-    : "";
-
-  const soilNames = {
-    omrali: "ყომრალი", kavisperi: "ყავისფერი", shavimiwa: "შავმიწა",
-    aluviari: "ალუვიური", kiteli: "ყვითელმიწა ეწერი", tsiteli: "წითელმიწა",
-    ruxikavisf: "რუხი ყავისფერი", bicsobi: "ბიცი/ბიცობი", mtamdelo: "მთა-მდელოს კორდიანი",
-  };
-  const soilName = soilNames[soilType] || "";
-  const soilPrefix = soilName ? `${soilName} ნიადაგი — ` : "";
-
-  let watering;
-  if (weather.rainMm >= rainThreshold) {
-    watering = soilWaterCat === "heavy"
-      ? `${soilPrefix}მძიმე ნიადაგი კარგად გაჯერდა — მორწყვა დღეს საჭირო არ არის; შეამოწმეთ დატბორვა.`
-      : `დღეს მორწყვა შეამცირეთ წვიმის გამო; მოერიდეთ გადაჭარბებულ დატბორვას.`;
-  } else if (weather.tempC >= heatThreshold || weather.rainMm === 0) {
-    watering = `${soilPrefix}მორწყვის სიხშირე გაზარდეთ; ნიადაგის ტენიანობა დილით და საღამოს შეამოწმეთ.`;
-    watering += irrigSuffix;
-  } else {
-    watering = soilWaterCat === "heavy"
-      ? `${soilPrefix}2-3 დღეში ერთხელ მორწყვა საკმარისია; გადარწყვა მოერიდეთ.`
-      : `${soilPrefix}შეინარჩუნეთ ნიადაგის საშუალო ტენიანობა და ყოველდღე შეამოწმეთ.`;
-    watering += irrigSuffix;
+  let watering = "შეინარჩუნეთ ნიადაგის საშუალო ტენიანობა და ყოველდღე შეამოწმეთ ნაკვეთი.";
+  if (weather.tempC >= 30 || weather.rainMm === 0) {
+    watering = "მორწყვის სიხშირე გაზარდეთ; ნიადაგის ტენიანობა დილით და საღამოს შეამოწმეთ.";
+  } else if (weather.rainMm >= 8) {
+    watering = "დღეს მორწყვა შეამცირეთ წვიმის გამო; მოერიდეთ გადაჭარბებულ დატბორვას.";
   }
 
   let risk = "დაბალი";
@@ -1415,7 +1158,7 @@ async function renderDashboard(data) {
     stageText = `${getStage(data.crop, dayCount)} (დათესვიდან ${dayCount} დღე)`;
   }
 
-  const advice = buildAdvice(data.crop, dayCount, weather, data.farmSize || 0, data.soilType || "", data.irrigationType || "");
+  const advice = buildAdvice(data.crop, dayCount, weather, data.farmSize || 0);
 
   const harvest = estimateHarvestDate(data.crop, data.plantingDate);
   const harvestEl = document.getElementById("out-harvest");
@@ -1427,23 +1170,7 @@ async function renderDashboard(data) {
     }
   }
 
-  renderForecast(weather.forecast, data.crop);
-  renderCropSchedule(data.crop, dayCount);
-
-  // ── Forecast danger alerts ──
-  const forecastAlerts = checkForecastAlerts(data.crop, weather.forecast);
-  const alertBar = document.querySelector(".alert-bar");
-  if (forecastAlerts.length > 0) {
-    const critical = forecastAlerts.filter(a => a.critical);
-    const toShow = critical.length > 0 ? critical : forecastAlerts;
-    const alertHTML = toShow.slice(0, 3).map(a =>
-      `<p class="forecast-alert-text ${a.critical ? "forecast-alert--critical" : "forecast-alert--warn"}">${a.text}</p>`
-    ).join("");
-    alertBar.innerHTML = `<p id="out-alert">${advice.alert}</p>${alertHTML}`;
-  } else {
-    alertBar.innerHTML = `<p id="out-alert">${advice.alert}</p>`;
-  }
-
+  renderForecast(weather.forecast);
 
   const farmSizeBlock = document.getElementById("farm-size-block");
   const outFarmSize = document.getElementById("out-farm-size");
@@ -1452,23 +1179,6 @@ async function renderDashboard(data) {
     farmSizeBlock.style.display = "";
   } else {
     farmSizeBlock.style.display = "none";
-  }
-
-  const soilBlock = document.getElementById("soil-block");
-  const outSoil = document.getElementById("out-soil");
-  const soilLabels = {
-    omrali: "🟤 ყომრალი", kavisperi: "🟫 ყავისფერი", shavimiwa: "⬛ შავმიწა",
-    aluviari: "🌊 ალუვიური", kiteli: "🟡 ყვითელმიწა ეწერი", tsiteli: "🔴 წითელმიწა",
-    ruxikavisf: "🩶 რუხი ყავისფერი", bicsobi: "🟣 ბიცი/ბიცობი", mtamdelo: "🏔️ მთა-მდელოს კორდიანი",
-  };
-  const irrigLabels = { drip: "💧 წვეთოვანი", furrow: "🌿 კვლებში", flood: "🌊 დატბორვით", sprinkler: "🚿 დაწვიმებითი", rain: "🌧 წვიმა" };
-  const soilStr = soilLabels[data.soilType] || "";
-  const irrigStr = irrigLabels[data.irrigationType] || "";
-  if (soilStr || irrigStr) {
-    outSoil.textContent = [soilStr, irrigStr].filter(Boolean).join(" / ");
-    soilBlock.style.display = "";
-  } else {
-    soilBlock.style.display = "none";
   }
 
   outCrop.textContent = cropLabelsKa[data.crop] || data.crop;
@@ -1482,7 +1192,7 @@ async function renderDashboard(data) {
   outSpraying.textContent = advice.spraying;
   outFertilizer.textContent = advice.fertilizer;
   outPesticide.textContent = advice.pesticide;
-  // outAlert is set inside the forecast alerts block below
+  outAlert.textContent = advice.alert;
 
   if (submitBtn) {
     submitBtn.textContent = "დაწყება →";
@@ -1495,7 +1205,6 @@ async function renderDashboard(data) {
   startAutoRefresh();
   void initNotifications(advice);
   scheduleMorningEmail();
-  triggerWeatherAlertNotification(checkForecastAlerts(data.crop, weather.forecast));
 }
 
 document.getElementById("whatsapp-btn").addEventListener("click", () => {
@@ -1577,9 +1286,7 @@ setupForm.addEventListener("submit", async (e) => {
     crop: String(formData.get("crop") || "").trim(),
     location: String(formData.get("location") || "").trim(),
     plantingDate: String(formData.get("plantingDate") || "").trim(),
-    farmSize: parseFloat(formData.get("farmSize") || "0") || 0,
-    soilType: String(formData.get("soilType") || "").trim(),
-    irrigationType: String(formData.get("irrigationType") || "").trim(),
+    farmSize: parseFloat(formData.get("farmSize") || "0") || 0
   };
 
   if (!data.crop || !data.location || !data.plantingDate) return;
@@ -1613,8 +1320,6 @@ editBtn.addEventListener("click", async () => {
     document.getElementById("location").value = saved.location;
     document.getElementById("planting-date").value = saved.plantingDate;
     if (saved.farmSize) document.getElementById("farm-size").value = saved.farmSize;
-    if (saved.soilType) document.getElementById("soil-type").value = saved.soilType;
-    if (saved.irrigationType) document.getElementById("irrigation-type").value = saved.irrigationType;
   }
   dashboardPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
@@ -1828,23 +1533,6 @@ async function initNotifications(advice) {
   if (granted) scheduleNotifications(advice);
 }
 
-function triggerWeatherAlertNotification(forecastAlerts) {
-  if (!forecastAlerts?.length) return;
-  if (Notification.permission !== "granted") return;
-
-  const critical = forecastAlerts.filter(a => a.critical);
-  const toNotify = critical.length > 0 ? critical : forecastAlerts;
-  const sentKey = `smartFarmWeatherAlert:${new Date().toISOString().slice(0, 10)}`;
-  if (localStorage.getItem(sentKey)) return;
-  localStorage.setItem(sentKey, "1");
-
-  new Notification("🌱 SmartFarm — ამინდის გაფრთხილება", {
-    body: toNotify.slice(0, 3).map(a => a.text).join("\n"),
-    icon: "favicon.svg",
-    tag: "weather-alert",
-  });
-}
-
 // ── Chat ──
 const chatToggle = document.getElementById("chat-toggle");
 const chatPanel = document.getElementById("chat-panel");
@@ -1939,19 +1627,8 @@ async function renderChatHistory() {
 }
 
 function getChatContext() {
-  const setupData = JSON.parse(localStorage.getItem(getSetupStorageKey()) || "null");
-  const soilLabels = {
-    omrali: "ყომრალი (pH 5.6-6.8)", kavisperi: "ყავისფერი (pH 7.0-7.4)", shavimiwa: "შავმიწა (pH 7.5-8.2)",
-    aluviari: "ალუვიური (pH 6.0-7.9)", kiteli: "ყვითელმიწა ეწერი (pH 3.9-5.1)", tsiteli: "წითელმიწა (pH 4.5-5.5)",
-    ruxikavisf: "რუხი ყავისფერი (pH 8.0-8.4)", bicsobi: "ბიცი/ბიცობი (pH 8.1-9.0)", mtamdelo: "მთა-მდელოს კორდიანი (pH 5.1-5.2)",
-  };
-  const irrigLabels = { drip: "წვეთოვანი მორწყვა", furrow: "კვლებში მორწყვა", flood: "ზედაპირული მორწყვა (დატბორვით)", sprinkler: "დაწვიმებითი მორწყვა", rain: "მხოლოდ წვიმა" };
   return {
-    cropKey: setupData?.crop || "",
-    soilKey: setupData?.soilType || "",
     crop: document.getElementById("out-crop")?.textContent || "",
-    soilType: soilLabels[setupData?.soilType] || "",
-    irrigationType: irrigLabels[setupData?.irrigationType] || "",
     location: document.getElementById("out-location")?.textContent || "",
     stage: document.getElementById("out-stage")?.textContent || "",
     weather: document.getElementById("out-weather")?.textContent || "",

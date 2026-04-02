@@ -3,115 +3,306 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ჭკვიანი ფერმერის ასისტენტი</title>
+    <title>SmartFarm</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="smart-farm.css" />
   </head>
   <body>
-    <main class="app">
-      <section class="panel auth-panel" id="auth-panel">
-        <h2>ანგარიშით შესვლა</h2>
-        <p class="muted" id="auth-status">სტატუსი: სტუმარი რეჟიმი</p>
-        <form id="auth-form">
-          <label for="auth-email">ელ-ფოსტა</label>
-          <input id="auth-email" name="email" type="email" placeholder="მაგ.: farmer@example.com" required />
-          <button type="submit">შესვლის ლინკის გაგზავნა</button>
-        </form>
-        <button id="logout-btn" class="secondary hidden" type="button">გასვლა</button>
-      </section>
 
-      <section class="panel hidden" id="setup-panel">
-        <h1>ჭკვიანი ფერმერის ასისტენტი</h1>
-        <p class="muted">შეიყვანეთ კულტურის მონაცემები და მიიღეთ ყოველდღიური რეკომენდაციები.</p>
-
-        <form id="setup-form">
-          <label for="crop">კულტურის ტიპი</label>
-          <select id="crop" name="crop" required>
-            <option value="">აირჩიეთ კულტურა</option>
-            <option value="maize">სიმინდი</option>
-            <option value="wheat">ხორბალი</option>
-            <option value="tomato">პომიდორი</option>
-            <option value="potato">კარტოფილი</option>
-            <option value="rice">ბრინჯი</option>
-            <option value="vine">ვაზი (ღვინო)</option>
-            <option value="nuts">თხილი/კაკალი</option>
-          </select>
-
-          <label for="location">მდებარეობა</label>
-          <input id="location" name="location" type="text" placeholder="მაგ.: თბილისი" required />
-
-          <label for="planting-date">დათესვის თარიღი</label>
-          <input id="planting-date" name="plantingDate" type="date" required />
-
-          <button type="submit">რეკომენდაციის გენერირება</button>
-        </form>
-      </section>
-
-      <section class="panel hidden" id="dashboard-panel">
-        <header class="dashboard-header">
-          <h2>დღევანდელი აგრო რეკომენდაცია</h2>
-          <button id="edit-btn" class="secondary" type="button">შეცვლა</button>
-        </header>
-
-        <div class="meta">
-          <p><strong>კულტურა:</strong> <span id="out-crop">-</span></p>
-          <p><strong>მდებარეობა:</strong> <span id="out-location">-</span></p>
-          <p><strong>ამინდი:</strong> <span id="out-weather">-</span></p>
-          <p><strong>მონაცემების წყარო:</strong> <span id="out-sync" class="sync-badge">ლოკალური</span></p>
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+      <div class="nav-inner">
+        <span class="nav-brand">🌱 SmartFarm</span>
+        <div class="field-switcher hidden" id="field-switcher">
+          <select id="field-select" class="field-select"></select>
+          <button type="button" id="add-field-btn" class="btn-add-field" title="ახალი ნაკვეთი">+</button>
+          <button type="button" id="delete-field-btn" class="btn-delete-field" title="წაშლა">🗑</button>
         </div>
-
-        <div class="cards">
-          <article class="card">
-            <h3>ზრდის სავარაუდო ფაზა</h3>
-            <p id="out-stage">-</p>
-          </article>
-
-          <article class="card">
-            <h3>მორწყვის რჩევა</h3>
-            <p id="out-watering">-</p>
-          </article>
-
-          <article class="card">
-            <h3>დაავადება/სოკოს რისკი</h3>
-            <p id="out-risk">-</p>
-          </article>
-
-          <article class="card">
-            <h3>შეწამვლის რჩევა</h3>
-            <p id="out-spraying">-</p>
-          </article>
-
-          <article class="card">
-            <h3>სასუქის რეკომენდაცია</h3>
-            <p id="out-fertilizer">-</p>
-          </article>
-
-          <article class="card">
-            <h3>ფუნგიციდი/პესტიციდი</h3>
-            <p id="out-pesticide">-</p>
-          </article>
-
-          <article class="card alert-card">
-            <h3>მოკლე გაფრთხილება</h3>
-            <p id="out-alert">-</p>
-          </article>
+        <div class="nav-auth" id="auth-panel">
+          <p class="nav-status" id="auth-status">სტატუსი: ლოკალური</p>
+          <form id="auth-form" class="nav-login-form">
+            <input id="auth-email" name="email" type="email" placeholder="ელ-ფოსტა" required />
+            <button type="submit">შესვლა</button>
+          </form>
+          <button id="logout-btn" class="nav-logout hidden" type="button">გასვლა</button>
         </div>
+      </div>
+    </nav>
 
-        <section class="task-panel">
-          <h3>დღევანდელი მოქმედებების მონიშვნა</h3>
-          <div class="task-buttons">
-            <button type="button" class="task-btn" data-task="watering">მოვრწყე</button>
-            <button type="button" class="task-btn" data-task="spraying">შევწამე</button>
-            <button type="button" class="task-btn" data-task="inspection">შემოწმება გავაკეთე</button>
+    <!-- ── Hero / Setup ── -->
+    <section id="setup-panel" class="hero hidden">
+      <div class="hero-inner">
+        <div class="hero-text">
+          <h1>ჭკვიანი ფერმერის<br/>ასისტენტი</h1>
+          <p>შეიყვანეთ ნაკვეთის მონაცემები და მიიღეთ ყოველდღიური რეკომენდაციები.</p>
+        </div>
+        <div class="setup-card">
+          <h2>ნაკვეთის მონაცემები</h2>
+          <form id="setup-form">
+            <div class="form-group">
+              <label for="crop">კულტურა</label>
+              <select id="crop" name="crop" required>
+                <option value="">აირჩიეთ...</option>
+                <optgroup label="მარცვლეული">
+                  <option value="maize">🌽 სიმინდი</option>
+                  <option value="wheat">🌾 ხორბალი</option>
+                  <option value="rice">🌾 ბრინჯი</option>
+                  <option value="sunflower">🌻 მზესუმზირა</option>
+                </optgroup>
+                <optgroup label="ბოსტნეული">
+                  <option value="tomato">🍅 პომიდორი</option>
+                  <option value="potato">🥔 კარტოფილი</option>
+                  <option value="pepper">🫑 წიწაკა</option>
+                  <option value="cucumber">🥒 კიტრი</option>
+                  <option value="cabbage">🥬 კომბოსტო</option>
+                  <option value="onion">🧅 ხახვი</option>
+                  <option value="garlic">🧄 ნიორი</option>
+                  <option value="carrot">🥕 სტაფილო</option>
+                  <option value="watermelon">🍉 საზამთრო</option>
+                  <option value="bean">🫘 ლობიო</option>
+                </optgroup>
+                <optgroup label="ხეხილი და კენკრა">
+                  <option value="vine">🍇 ვაზი (ღვინო)</option>
+                  <option value="apple">🍎 ვაშლი</option>
+                  <option value="peach">🍑 ატამი</option>
+                  <option value="strawberry">🍓 მარწყვი</option>
+                  <option value="nuts">🌰 თხილი / კაკალი</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="location">სოფელი / ქალაქი</label>
+              <input id="location" name="location" type="text" placeholder="მაგ.: თელავი" required />
+              <p id="location-error" class="field-error hidden"></p>
+            </div>
+            <div class="form-group">
+              <label for="planting-date">დათესვის თარიღი</label>
+              <div class="date-row">
+                <input id="planting-date" name="plantingDate" type="date" required />
+                <button type="button" id="today-btn" class="btn-today">დღეს</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="farm-size">ნაკვეთის ფართობი (ჰა)</label>
+              <div class="size-row">
+                <input id="farm-size" name="farmSize" type="number" min="0.1" max="9999" step="0.1" placeholder="მაგ.: 1.5" />
+                <span class="size-unit">ჰა</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="soil-type">ნიადაგის ტიპი</label>
+              <select id="soil-type" name="soilType">
+                <option value="">აირჩიეთ (სურვილისამებრ)...</option>
+                <optgroup label="გავრცელებული ნიადაგები">
+                  <option value="omrali">🟤 ყომრალი — სუსტ-მჟავე, pH 5.6-6.8 (სამხ. კახეთი, ქართლი)</option>
+                  <option value="kavisperi">🟫 ყავისფერი — ნეიტრალური, pH 7.0-7.4 (მთის ფერდობები)</option>
+                  <option value="shavimiwa">⬛ შავმიწა — ტუტე, pH 7.5-8.2 (ბარი, მდიდარი ნიადაგი)</option>
+                  <option value="aluviari">🌊 ალუვიური — ნეიტრ./ოდნავ მჟავე, pH 6.0-7.9 (მდინარის ჭალები)</option>
+                </optgroup>
+                <optgroup label="დასავლეთ საქართველო">
+                  <option value="kiteli">🟡 ყვითელმიწა ეწერი — ძლიერ-მჟავე, pH 3.9-5.1 (კოლხეთი, ბათუმი)</option>
+                  <option value="tsiteli">🔴 წითელმიწა — მჟავე, pH 4.5-5.5 (გურია, ადჟარა, სამეგრელო)</option>
+                </optgroup>
+                <optgroup label="სხვა ტიპები">
+                  <option value="ruxikavisf">🩶 რუხი ყავისფერი — ტუტე, pH 8.0-8.4 (მშრალი ზოლი)</option>
+                  <option value="bicsobi">🟣 ბიცი / ბიცობი — ძლიერ-ტუტე, pH 8.1-9.0 (მლაშე ნიადაგი)</option>
+                  <option value="mtamdelo">🏔️ მთა-მდელოს კორდიანი — მჟავე, pH 5.1-5.2 (მაღალი ჰუმუსი)</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="irrigation-type">მორწყვის სისტემა</label>
+              <select id="irrigation-type" name="irrigationType">
+                <option value="">აირჩიეთ (სურვილისამებრ)...</option>
+                <option value="drip">💧 წვეთოვანი მორწყვა</option>
+                <option value="furrow">🌿 კვლებში (ღარებში) მორწყვა</option>
+                <option value="flood">🌊 ზედაპირული მორწყვა (დატბორვით)</option>
+                <option value="sprinkler">🚿 დაწვიმებითი მორწყვა (სპრინკლერებით)</option>
+                <option value="rain">🌧 მხოლოდ წვიმა</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-main">დაწყება →</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Dashboard ── -->
+    <main id="dashboard-panel" class="dashboard hidden">
+      <div class="dashboard-inner">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-hero">
+            <span class="sidebar-label">კულტურა</span>
+            <h2 id="out-crop">-</h2>
+            <p id="out-location" class="sidebar-location">-</p>
           </div>
-          <div class="task-log">
-            <h4>შესრულებული მოქმედებები</h4>
-            <ul id="task-history">
-              <li>ჯერ ჩანაწერი არ არის.</li>
+
+          <div class="sidebar-block">
+            <span class="block-label">ამინდი დღეს</span>
+            <p id="out-weather" class="block-value">-</p>
+            <button id="refresh-btn" class="btn-refresh" type="button">↻ განახლება</button>
+          </div>
+
+          <div class="sidebar-block">
+            <span class="block-label">🌿 ზრდის ფაზა</span>
+            <p id="out-stage" class="block-value">-</p>
+          </div>
+
+          <div class="sidebar-block" id="farm-size-block" style="display:none">
+            <span class="block-label">📐 ნაკვეთის ფართობი</span>
+            <p id="out-farm-size" class="block-value">-</p>
+          </div>
+
+          <div class="sidebar-block" id="soil-block" style="display:none">
+            <span class="block-label">🪨 ნიადაგი / მორწყვა</span>
+            <p id="out-soil" class="block-value">-</p>
+          </div>
+
+          <div class="sidebar-block harvest-block">
+            <span class="block-label">🌾 სავარაუდო მოსავალი</span>
+            <p id="out-harvest" class="block-value">-</p>
+          </div>
+
+          <div class="sidebar-block">
+            <span class="block-label">მონაცემების წყარო</span>
+            <span id="out-sync" class="sync-badge">ლოკალური</span>
+          </div>
+
+          <button id="edit-btn" class="btn-edit" type="button">✏️ პარამეტრების შეცვლა</button>
+        </aside>
+
+        <!-- Main content -->
+        <div class="main-content">
+
+          <!-- WhatsApp share -->
+          <button id="whatsapp-btn" type="button" class="btn-whatsapp">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.508 5.83L.057 23.077a.75.75 0 0 0 .921.921l5.247-1.451A11.934 11.934 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.715 9.715 0 0 1-4.964-1.362l-.355-.213-3.664 1.013 1.013-3.664-.213-.355A9.715 9.715 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+            WhatsApp-ით გაზიარება
+          </button>
+
+          <!-- 7-day forecast -->
+          <div class="forecast-card">
+            <p class="section-label">7-დღიანი პროგნოზი</p>
+            <div id="forecast-strip" class="forecast-strip"></div>
+          </div>
+
+          <!-- Alert -->
+          <div class="alert-bar">
+            <p id="out-alert">-</p>
+          </div>
+
+          <!-- Verdicts -->
+          <div class="verdicts">
+            <div class="verdict-item">
+              <span class="verdict-icon">💧</span>
+              <div class="verdict-body">
+                <p class="verdict-label">მორწყვა</p>
+                <p id="out-watering" class="verdict-text">-</p>
+              </div>
+            </div>
+            <div class="verdict-item">
+              <span class="verdict-icon">🦠</span>
+              <div class="verdict-body">
+                <p class="verdict-label">დაავადების რისკი</p>
+                <p id="out-risk" class="risk-badge">-</p>
+              </div>
+            </div>
+            <div class="verdict-item">
+              <span class="verdict-icon">🌿</span>
+              <div class="verdict-body">
+                <p class="verdict-label">შეწამვლა</p>
+                <p id="out-spraying" class="verdict-text">-</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task buttons -->
+          <div class="task-section">
+            <p class="section-label">დღეს შესრულდა:</p>
+            <div class="task-buttons">
+              <button type="button" class="task-btn" data-task="watering">💧<br/>მოვრწყე</button>
+              <button type="button" class="task-btn" data-task="spraying">🌿<br/>შევწამე</button>
+              <button type="button" class="task-btn" data-task="inspection">🔍<br/>შემოვამოწმე</button>
+            </div>
+          </div>
+
+          <!-- Extra advice -->
+          <details class="extra-advice">
+            <summary>დამატებითი რეკომენდაციები ▾</summary>
+            <div class="extra-inner">
+              <p class="extra-label">სასუქი</p>
+              <p id="out-fertilizer">-</p>
+              <p class="extra-label">ფუნგიციდი / პესტიციდი</p>
+              <p id="out-pesticide">-</p>
+            </div>
+          </details>
+
+          <!-- Crop protection schedule -->
+          <details class="extra-advice" id="schedule-details">
+            <summary>🗓️ დაცვის და კვების სქემა ▾</summary>
+            <div id="crop-schedule" class="schedule-wrap"></div>
+          </details>
+
+          <!-- Daily email -->
+          <div class="email-notif-strip">
+            <p class="auth-strip-title">📧 ყოველდღიური ელ-ფოსტის შეტყობინება</p>
+            <p class="auth-status-text">დილის 8 საათზე მიიღებთ დღევანდელ რეკომენდაციებს</p>
+            <form id="notif-email-form" class="auth-form">
+              <input id="notif-email" type="email" placeholder="თქვენი ელ-ფოსტა" required />
+              <button type="submit">გამოწერა</button>
+            </form>
+            <p id="notif-email-status" class="auth-status-text hidden"></p>
+            <button id="test-email-btn" type="button" class="btn-test-email hidden">🧪 ახლა გამოგზავნა</button>
+          </div>
+
+          <!-- History -->
+          <div class="history-wrap">
+            <div class="history-header">
+              <p class="section-label">ჩანაწერები</p>
+              <button id="clear-history-btn" type="button" class="btn-clear">🗑 გასუფთავება</button>
+            </div>
+            <ul id="task-history" class="history-list">
+              <li class="history-empty">ჩანაწერი არ არის.</li>
             </ul>
           </div>
-        </section>
-      </section>
+
+        </div>
+      </div>
     </main>
+
+    <!-- ── Chat ── -->
+    <button id="chat-toggle" class="chat-toggle hidden" type="button">💬</button>
+
+    <div id="chat-panel" class="chat-panel hidden">
+      <div class="chat-header">
+        <span>🌱 ფერმერის ასისტენტი</span>
+        <button id="chat-close" type="button">✕</button>
+      </div>
+      <div id="chat-messages" class="chat-messages">
+        <div class="chat-bubble bot">გამარჯობა! დამისვი კითხვა შენი ნაკვეთის შესახებ.</div>
+      </div>
+      <form id="chat-form" class="chat-input-row">
+        <label for="chat-photo" class="btn-photo" title="ფოტოს ატვირთვა">📷
+          <input id="chat-photo" type="file" accept="image/*" capture="environment" hidden />
+        </label>
+        <input id="chat-input" type="text" placeholder="დასვი კითხვა..." autocomplete="off" />
+        <button type="submit">→</button>
+      </form>
+    </div>
+
+    <!-- ── Footer ── -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span>🌱 SmartFarm</span>
+        <span>ჭკვიანი სოფლის მეურნეობა © 2025</span>
+      </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app-config.js"></script>
