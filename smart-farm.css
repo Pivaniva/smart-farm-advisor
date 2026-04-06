@@ -29,8 +29,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; overflow-x: hidden; }
-body { overflow-x: hidden; }
+html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
+body { overflow-x: hidden; max-width: 100%; }
+img, video, iframe, table { max-width: 100%; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
@@ -1412,10 +1413,10 @@ input::placeholder { color: var(--muted-2); }
   .field-select { max-width: 110px; font-size: .8rem; }
   .field-switcher { gap: 4px; min-width: 0; flex-shrink: 1; overflow: hidden; }
 
-  .dashboard-inner { padding: 0 12px; margin: 0; }
+  .dashboard-inner { padding: 0 12px; margin: 0; width: 100%; box-sizing: border-box; }
+  .sidebar, .main-content { width: 100%; min-width: 0; box-sizing: border-box; }
   .sidebar-hero { padding: 16px; }
   .sidebar-block { padding: 12px 14px; }
-  .sidebar, .main-content { width: 100%; }
   .hero-inner { padding: 30px 14px; }
   .hero-text h1 { font-size: 1.75rem; }
 
