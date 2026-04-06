@@ -1412,7 +1412,7 @@ input::placeholder { color: var(--muted-2); }
   .field-select { max-width: 110px; font-size: .8rem; }
   .field-switcher { gap: 4px; min-width: 0; flex-shrink: 1; overflow: hidden; }
 
-  .dashboard-inner { padding: 0 6px; }
+  .dashboard-inner { padding: 0 8px 0 0; }
   .sidebar-hero { padding: 16px; }
   .sidebar-block { padding: 12px 14px; }
   .hero-inner { padding: 30px 14px; }
