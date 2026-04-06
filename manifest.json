@@ -1,0 +1,20 @@
+{
+  "name": "SmartFarm — ჭკვიანი ფერმერი",
+  "short_name": "SmartFarm",
+  "description": "ყოველდღიური სოფლის მეურნეობის ასისტენტი",
+  "start_url": "/smart-farm-advisor/",
+  "scope": "/smart-farm-advisor/",
+  "display": "standalone",
+  "background_color": "#182e0c",
+  "theme_color": "#182e0c",
+  "lang": "ka",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
