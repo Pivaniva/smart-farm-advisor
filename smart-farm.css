@@ -52,6 +52,7 @@ body {
   height: var(--navbar-h);
   background: var(--green-900);
   box-shadow: 0 2px 16px rgba(0,0,0,.28);
+  overflow: hidden;
 }
 
 .nav-inner {
@@ -1306,12 +1307,15 @@ input::placeholder { color: var(--muted-2); }
 }
 
 @media (max-width: 580px) {
-  .nav-inner { padding: 0 14px; gap: 8px; }
+  .nav-inner { padding: 0 12px; gap: 6px; overflow: hidden; }
   .nav-status { display: none; }
-  .nav-login-form input { width: 120px; font-size: .8rem; padding: 6px 10px; }
-  .nav-login-form button { padding: 6px 10px; font-size: .8rem; }
-  .nav-brand { font-size: 1rem; }
-  .field-select { max-width: 120px; font-size: .8rem; }
+  .nav-auth { min-width: 0; flex-shrink: 1; overflow: hidden; }
+  .nav-login-form { gap: 5px; flex-wrap: nowrap; min-width: 0; }
+  .nav-login-form input { width: 110px; min-width: 0; font-size: .8rem; padding: 6px 8px; }
+  .nav-login-form button { padding: 6px 10px; font-size: .8rem; white-space: nowrap; flex-shrink: 0; }
+  .nav-brand { font-size: .95rem; flex-shrink: 0; }
+  .field-select { max-width: 110px; font-size: .8rem; }
+  .field-switcher { gap: 4px; min-width: 0; flex-shrink: 1; }
 
   .dashboard-inner { padding: 0 14px; }
   .hero-inner { padding: 30px 14px; }
