@@ -34,7 +34,20 @@
             <input id="auth-email" name="email" type="email" placeholder="ელ-ფოსტა" required />
             <button type="submit">შესვლა</button>
           </form>
+          <button id="nav-login-btn" class="nav-login-mobile hidden" type="button">👤</button>
           <button id="logout-btn" class="nav-logout hidden" type="button">გასვლა</button>
+        </div>
+
+        <!-- Mobile login modal -->
+        <div id="login-modal" class="login-modal hidden">
+          <div class="login-modal-box">
+            <p class="login-modal-title">შესვლა</p>
+            <form id="auth-form-modal" class="login-modal-form">
+              <input id="auth-email-modal" name="email" type="email" placeholder="ელ-ფოსტა" required />
+              <button type="submit">შესვლა →</button>
+            </form>
+            <button class="login-modal-close" id="login-modal-close">გაუქმება</button>
+          </div>
         </div>
       </div>
     </nav>

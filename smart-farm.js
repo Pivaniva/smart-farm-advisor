@@ -166,10 +166,12 @@ function setAuthStatusText(text) {
 }
 
 function renderAuthUI() {
+  const mobileBtn = document.getElementById("nav-login-btn");
   if (currentUser?.email) {
     setAuthStatusText(`სტატუსი: შესულია - ${currentUser.email}`);
     logoutBtn.classList.remove("hidden");
     authForm.classList.add("hidden");
+    if (mobileBtn) mobileBtn.classList.add("hidden");
     setupPanel.classList.remove("hidden");
     return;
   }
@@ -177,6 +179,7 @@ function renderAuthUI() {
   setAuthStatusText("სტატუსი: ლოკალური რეჟიმი");
   logoutBtn.classList.add("hidden");
   authForm.classList.remove("hidden");
+  if (mobileBtn) mobileBtn.classList.remove("hidden");
 }
 
 async function verifySupabaseConnection() {
@@ -1783,6 +1786,37 @@ authForm.addEventListener("submit", async (e) => {
   if (!email) return;
   await sendLoginLink(email);
 });
+
+// Mobile login modal
+const navLoginBtn   = document.getElementById("nav-login-btn");
+const loginModal    = document.getElementById("login-modal");
+const loginModalClose = document.getElementById("login-modal-close");
+const authFormModal = document.getElementById("auth-form-modal");
+const authEmailModal = document.getElementById("auth-email-modal");
+
+if (navLoginBtn) {
+  navLoginBtn.addEventListener("click", () => {
+    loginModal.classList.remove("hidden");
+    authEmailModal.focus();
+  });
+}
+if (loginModalClose) {
+  loginModalClose.addEventListener("click", () => loginModal.classList.add("hidden"));
+}
+if (loginModal) {
+  loginModal.addEventListener("click", (e) => {
+    if (e.target === loginModal) loginModal.classList.add("hidden");
+  });
+}
+if (authFormModal) {
+  authFormModal.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = String(authEmailModal.value || "").trim();
+    if (!email) return;
+    loginModal.classList.add("hidden");
+    await sendLoginLink(email);
+  });
+}
 
 logoutBtn.addEventListener("click", async () => {
   await logout();

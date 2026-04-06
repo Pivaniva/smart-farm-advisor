@@ -212,6 +212,102 @@ body {
 
 .nav-logout:hover { background: rgba(255,255,255,.08); color: #eee8dc; }
 
+.nav-login-mobile {
+  display: none;
+  font-size: 1.1rem;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--r-xs);
+  color: #eee8dc;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .18s;
+}
+.nav-login-mobile:hover { background: rgba(255,255,255,.2); }
+
+/* Login modal */
+.login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-modal.hidden { display: none; }
+
+.login-modal-box {
+  background: var(--card);
+  border-radius: var(--r);
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.login-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-modal-form input {
+  font: inherit;
+  font-size: .95rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  width: 100%;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.login-modal-form input:focus {
+  outline: none;
+  border-color: var(--green-600);
+}
+
+.login-modal-form button {
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 700;
+  background: var(--green-700);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 12px;
+  cursor: pointer;
+  transition: background .18s;
+}
+
+.login-modal-form button:hover { background: var(--green-600); }
+
+.login-modal-close {
+  font: inherit;
+  font-size: .85rem;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+}
+
 /* ══════════════════════
    HERO / SETUP
 ══════════════════════ */
@@ -1309,13 +1405,12 @@ input::placeholder { color: var(--muted-2); }
 @media (max-width: 580px) {
   .nav-inner { padding: 0 12px; gap: 6px; overflow: hidden; }
   .nav-status { display: none; }
-  .nav-auth { min-width: 0; flex-shrink: 1; overflow: hidden; }
-  .nav-login-form { gap: 5px; flex-wrap: nowrap; min-width: 0; }
-  .nav-login-form input { width: 110px; min-width: 0; font-size: .8rem; padding: 6px 8px; }
-  .nav-login-form button { padding: 6px 10px; font-size: .8rem; white-space: nowrap; flex-shrink: 0; }
+  .nav-auth { min-width: 0; flex-shrink: 0; }
+  .nav-login-form { display: none !important; }
+  .nav-login-mobile:not(.hidden) { display: flex !important; }
   .nav-brand { font-size: .95rem; flex-shrink: 0; }
   .field-select { max-width: 110px; font-size: .8rem; }
-  .field-switcher { gap: 4px; min-width: 0; flex-shrink: 1; }
+  .field-switcher { gap: 4px; min-width: 0; flex-shrink: 1; overflow: hidden; }
 
   .dashboard-inner { padding: 0 14px; }
   .hero-inner { padding: 30px 14px; }
