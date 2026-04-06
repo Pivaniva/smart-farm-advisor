@@ -172,6 +172,7 @@ body {
   padding: 7px 12px;
   color: #eee8dc;
   width: 200px;
+  max-width: 100%;
   transition: background .18s, border-color .18s;
 }
 
@@ -654,6 +655,8 @@ input::placeholder { color: var(--muted-2); }
   border-radius: var(--r-sm);
   padding: 16px 18px;
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  min-width: 0;
 }
 
 .forecast-strip {
