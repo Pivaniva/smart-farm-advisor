@@ -1412,11 +1412,31 @@ function buildAdvice(crop, dayCount, weather, farmSize, soilType, irrigationType
   if (weather.humidity >= 85) risk = "მაღალი";
   else if (weather.humidity >= 75) risk = "საშუალო";
 
-  let spraying = "ახლავე შეწამვლა საჭირო არ არის. განაგრძეთ ნაკვეთის მონიტორინგი.";
-  if (risk === "მაღალი") {
-    spraying = "მაღალი ტენიანობის რისკია: დაათვალიერეთ ფოთლები და სიმპტომებისას გამოიყენეთ პროფილაქტიკური ფუნგიციდი.";
-  } else if (risk === "საშუალო") {
-    spraying = "აკონტროლეთ სოკოს ადრეული ნიშნები; შეწამვლამდე უზრუნველყავით ჰაერის ცირკულაცია.";
+  // Build spraying advice from current CROP_SCHEDULES stage
+  const schedRows = (CROP_SCHEDULES[crop] || []).filter(r => r.days);
+  const activeStage = schedRows.find(r => dayCount >= r.days[0] && dayCount < r.days[1])
+                   || schedRows[schedRows.length - 1];
+
+  let spraying;
+  if (activeStage) {
+    const parts = [];
+    if (activeStage.fungicide && activeStage.fungicide !== "საჭირო არ არის") {
+      parts.push(`🍄 ფუნგიციდი: ${activeStage.fungicide}`);
+    }
+    if (activeStage.insecticide && activeStage.insecticide !== "საჭირო არ არის") {
+      parts.push(`🐛 ინსექტიციდი: ${activeStage.insecticide}`);
+    }
+    if (risk === "მაღალი") {
+      parts.push("⚠️ მაღალი ტენიანობა — ფუნგიციდი გადაუდებელია!");
+    } else if (risk === "საშუალო") {
+      parts.push("⚠️ საშუალო ტენიანობა — სოკოს ნიშნებს გააკვირდით.");
+    }
+    if (activeStage.notes) parts.push(`📌 ${activeStage.notes}`);
+    spraying = parts.length ? parts.join(" | ") : "ახლავე შეწამვლა საჭირო არ არის. განაგრძეთ მონიტორინგი.";
+  } else {
+    spraying = "ახლავე შეწამვლა საჭირო არ არის. განაგრძეთ ნაკვეთის მონიტორინგი.";
+    if (risk === "მაღალი") spraying = "მაღალი ტენიანობის რისკია: სიმპტომებისას გამოიყენეთ პროფილაქტიკური ფუნგიციდი.";
+    else if (risk === "საშუალო") spraying = "აკონტროლეთ სოკოს ადრეული ნიშნები; შეწამვლამდე უზრუნველყავით ჰაერის ცირკულაცია.";
   }
 
   const alert =
