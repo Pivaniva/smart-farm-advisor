@@ -2198,7 +2198,13 @@ chatToggle.addEventListener("click", async () => {
     if (isMobile()) chatToggle.classList.add("hidden");
     chatMessages.innerHTML = '<div class="chat-bubble bot">გამარჯობა! დამისვი კითხვა შენი ნაკვეთის შესახებ.</div>';
     await renderChatHistory();
-    chatInput.focus();
+    // scroll to bottom before focusing (so keyboard doesn't hide messages)
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // slight delay on mobile so layout settles before keyboard opens
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatInput.focus();
+    }, 100);
   }
 });
 
