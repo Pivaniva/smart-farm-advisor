@@ -1447,7 +1447,7 @@ input::placeholder { color: var(--muted-2); }
   #cost-details > summary { padding: 14px 16px; font-size: .9rem; }
 }
 
-/* Chat panel: full-width bottom-sheet on phones */
+/* Chat panel: full-width bottom-sheet on phones (iOS + Android) */
 @media (max-width: 600px) {
   .chat-panel {
     position: fixed;
@@ -1457,10 +1457,18 @@ input::placeholder { color: var(--muted-2); }
     top: auto;
     width: 100vw;
     max-width: 100vw;
-    max-height: 88dvh;
+    /* Android: keyboard shrinks viewport so dvh works correctly */
+    /* iOS: keyboard overlays so dvh adjusts dynamically */
+    max-height: 90dvh;
     border-radius: 16px 16px 0 0;
     border: none;
     box-sizing: border-box;
+  }
+
+  .chat-messages {
+    /* Android keyboard shrinks viewport — messages area flex-shrinks */
+    flex: 1 1 auto;
+    min-height: 80px;
   }
 
   .chat-input-row {
@@ -1469,38 +1477,55 @@ input::placeholder { color: var(--muted-2); }
     align-items: center;
     gap: 8px;
     padding: 10px 12px;
+    /* iOS safe area (home indicator) */
     padding-bottom: max(12px, env(safe-area-inset-bottom));
     box-sizing: border-box;
     width: 100%;
-    overflow: visible;
+    /* Android: stay above keyboard */
+    flex-shrink: 0;
   }
 
   .chat-input-row input {
     flex: 1 1 0;
     min-width: 0;
     width: 0;
+    /* Android: larger touch area */
+    height: 44px;
+    font-size: 1rem;
   }
 
   .btn-photo {
-    flex: 0 0 38px;
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    font-size: 1.2rem;
   }
 
   .chat-input-row button[type="submit"] {
     flex: 0 0 44px;
     width: 44px;
-    height: 38px;
+    height: 44px;
     padding: 0;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
 
   .chat-toggle {
     bottom: max(16px, env(safe-area-inset-bottom));
     right: 16px;
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+  }
+
+  /* Android: larger tap targets for all buttons */
+  .task-btn {
+    min-height: 52px;
+  }
+
+  .btn-refresh, .btn-clear, .btn-edit {
+    min-height: 40px;
+    padding: 10px 16px;
   }
 }
 
