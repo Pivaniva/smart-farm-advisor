@@ -192,7 +192,7 @@ async function handleSummarize(body: Record<string, unknown>, groqKey: string): 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
@@ -331,8 +331,8 @@ ${soilKnowledge || (context.soilType ? `ნიადაგი: ${context.soilTyp
       : message;
 
     const model = imageBase64
-      ? "meta-llama/llama-4-scout-17b-16e-instruct"
-      : "llama-3.3-70b-versatile";
+      ? "qwen/qwen3.6-27b"
+      : "openai/gpt-oss-120b";
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
