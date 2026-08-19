@@ -196,7 +196,7 @@ async function handleSummarize(body: Record<string, unknown>, groqKey: string): 
       messages: [
         {
           role: "system",
-          content: "შენ ხარ ქართველი აგრონომი. შეაჯამე მოცემული საუბარი მოკლედ — 2-3 სრული ქართული წინადადებით. ხაზი გაუსვი მნიშვნელოვან რჩევებს და დასკვნებს.",
+          content: "CRITICAL: Respond ONLY in Georgian language, never in English. შენ ხარ ქართველი აგრონომი. შეაჯამე მოცემული საუბარი მხოლოდ ქართულად, მოკლედ — 2-3 სრული ქართული წინადადებით. ხაზი გაუსვი მნიშვნელოვან რჩევებს და დასკვნებს.",
         },
         {
           role: "user",
@@ -256,10 +256,11 @@ Deno.serve(async (req) => {
       ? `\nᲔᲕᲠᲝᲞᲔᲝᲑᲐᲜᲢ ᲘᲜᲡᲢᲠᲣᲥᲪᲘᲐ ᲤᲝᲢᲝᲡ ᲐᲜᲐᲚᲘᲖᲘᲡᲐᲗᲕᲘᲡ: ᲠᲝᲙᲔᲡ ᲙULTIVARI ᲐᲠᲐᲡ "${context.crop || cropKey}" — ᲔᲡ ᲤᲤᲐᲑᲠᲕᲔᲑᲐ. ᲓᲐᲡᲐᲬᲝᲠᲕᲔ ᲪᲝᲗᲝᲡ ᲓᲐᲐᲕᲐᲓᲔᲑᲐ ᲔᲘᲡ ᲙULTIVARᲘᲡᲐᲗᲕᲘᲡ CHARARTERISTIC SYMPTOMS-ᲔᲑᲘᲡ ᲛᲘᲯᲕᲘᲗ. Ნ��� ᏔᲐᲢᲥᲕᲐ ᲗᲣ ᲠᲝᲙᲔᲡ KULTIVARI ᲡᲮᲕᲐ ᲙULTIVARIA.\n\nINSTRUCTION FOR PHOTO ANALYSIS: The farmer's crop is DEFINITIVELY "${context.crop || cropKey}". Analyze the photo ONLY for diseases and pests known to affect this specific crop. Do NOT identify or suggest it is a different crop.`
       : "";
 
-    const system = `შენ ხარ გამოცდილი ქართველი აგრონომი და ფერმერის ასისტენტი. პასუხობ მხოლოდ სასოფლო-სამეურნეო თემებზე.
+    const system = `CRITICAL LANGUAGE RULE: You MUST respond ONLY in Georgian (ქართული ენა). Never write English words, sentences, or bullet points. If you are about to write an English word, translate it to Georgian instead. Chemical/product names may stay in their original form, everything else must be Georgian.
+შენ ხარ გამოცდილი ქართველი აგრონომი და ფერმერის ასისტენტი. პასუხობ მხოლოდ სასოფლო-სამეურნეო თემებზე.
 
 წესები:
-- წერე მხოლოდ სალიტერატურო ქართულად, მარტივი ფერმერისთვის გასაგები ენით
+- წერე მხოლოდ და მხოლოდ ქართულად — არცერთი ინგლისური სიტყვა ან წინადადება! სალიტერატურო, მარტივი ფერმერისთვის გასაგები ენით
 - პასუხი იყოს მოკლე და კონკრეტული — არ დაწეროთ ზედმეტი
 - გამოიყენე bullet points (•) — თითოეული პუნქტი 1 კონკრეტული რჩევა
 - მაქსიმუმ 4-5 bullet point, თითოეული მაქსიმუმ 1 წინადადება
