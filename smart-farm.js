@@ -2267,34 +2267,59 @@ chatClose.addEventListener("click", () => {
   chatToggle.classList.remove("hidden");
 });
 
+const CHAT_UNAVAILABLE_MSG = "სერვისი ამჟამად მიუწვდომელია, სცადეთ რამდენიმე წუთში";
+const CHAT_GENERIC_ERROR_MSG = "დაფიქსირდა შეცდომა, სცადეთ თავიდან";
+
 async function sendChatRequest(message, imageBase64) {
   const submitBtn = chatForm.querySelector("button[type='submit']");
   submitBtn.disabled = true;
   const typing = appendBubble("იფიქრებს...", "bot typing");
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
   try {
-    const res = await fetch(`${appConfig.supabaseUrl}/functions/v1/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${appConfig.supabaseAnonKey}`,
-      },
-      body: JSON.stringify({ message, imageBase64, context: getChatContext() }),
-    });
+    let res;
+    try {
+      res = await fetch(`${appConfig.supabaseUrl}/functions/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${appConfig.supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ message, imageBase64, context: getChatContext() }),
+        signal: controller.signal,
+      });
+    } catch (networkErr) {
+      // Covers offline/DNS/CORS failures (TypeError) and our own 20s abort timeout.
+      typing.remove();
+      appendBubble(CHAT_UNAVAILABLE_MSG, "bot");
+      return;
+    }
+
+    if (res.status === 503) {
+      typing.remove();
+      appendBubble(CHAT_UNAVAILABLE_MSG, "bot");
+      return;
+    }
+
+    if (!res.ok) {
+      typing.remove();
+      appendBubble(CHAT_GENERIC_ERROR_MSG, "bot");
+      return;
+    }
 
     const data = await res.json();
     typing.remove();
     if (data.error) {
-      appendBubble("ERROR: " + data.error, "bot");
+      appendBubble(CHAT_GENERIC_ERROR_MSG, "bot");
     } else {
       const answer = data.answer || "პასუხი ვერ მოიძებნა.";
       appendBubble(answer, "bot");
       saveMessage("bot", answer);
     }
-  } catch (err) {
-    typing.remove();
-    appendBubble("შეცდომა: " + err.message, "bot");
   } finally {
+    clearTimeout(timeoutId);
     submitBtn.disabled = false;
     chatInput.focus();
   }
