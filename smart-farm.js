@@ -2022,7 +2022,9 @@ const NOTIF_KEY = "smartFarmNotifScheduled";
 async function registerSW() {
   if (!("serviceWorker" in navigator)) return;
   try {
-    await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.register(new URL("sw.js", document.baseURI), {
+      scope: new URL(".", document.baseURI).pathname,
+    });
   } catch (_) {}
 }
 
@@ -2039,8 +2041,8 @@ function showNotification(title, body) {
   navigator.serviceWorker.ready.then((reg) => {
     reg.showNotification(title, {
       body,
-      icon: "/favicon.png",
-      badge: "/favicon.png",
+      icon: new URL("icons/icon-192.png", document.baseURI).href,
+      badge: new URL("icons/icon-192.png", document.baseURI).href,
       tag: "smartfarm-daily",
       renotify: true,
     });
