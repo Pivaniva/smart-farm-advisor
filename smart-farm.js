@@ -2361,3 +2361,7 @@ document.getElementById("chat-photo").addEventListener("change", async (e) => {
   renderFieldSwitcher();
   await reloadDataForCurrentScope();
 })();
+
+window.addEventListener("load", () => {
+  registerSW();
+});
