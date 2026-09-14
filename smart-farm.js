@@ -1950,7 +1950,7 @@ function getEmailPayload() {
 async function sendDailyEmail() {
   const payload = getEmailPayload();
   if (!payload.email) return;
-  await fetch(`${appConfig.supabaseUrl}/functions/v1/daily-email`, {
+  const res = await fetch(`${appConfig.supabaseUrl}/functions/v1/daily-email`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1958,6 +1958,9 @@ async function sendDailyEmail() {
     },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    throw new Error(`daily-email failed with status ${res.status}`);
+  }
 }
 
 document.getElementById("notif-email-form").addEventListener("submit", async (e) => {
@@ -1977,10 +1980,15 @@ document.getElementById("test-email-btn").addEventListener("click", async () => 
   const status = document.getElementById("notif-email-status");
   btn.textContent = "იგზავნება...";
   btn.disabled = true;
-  await sendDailyEmail();
-  btn.textContent = "🧪 ახლა გამოგზავნა";
-  btn.disabled = false;
-  status.textContent = "✅ ელ-ფოსტა გაიგზავნა! შეამოწმეთ inbox.";
+  try {
+    await sendDailyEmail();
+    status.textContent = "✅ ელ-ფოსტა გაიგზავნა! შეამოწმეთ inbox.";
+  } catch (err) {
+    status.textContent = "გაგზავნა ვერ მოხერხდა, სცადეთ თავიდან";
+  } finally {
+    btn.textContent = "🧪 ახლა გამოგზავნა";
+    btn.disabled = false;
+  }
 });
 
 // Restore saved email on load
