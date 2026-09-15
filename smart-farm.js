@@ -21,53 +21,10 @@ const outAlert = document.getElementById("out-alert");
 const taskButtons = document.querySelectorAll(".task-btn");
 const taskHistory = document.getElementById("task-history");
 
-const LEGACY_SETUP_KEY_BASE = "smartFarmSetup";
-const LOCAL_TASKS_KEY_BASE = "smartFarmTaskHistory";
 const DEVICE_ID_KEY = "smartFarmDeviceId";
-const FIELDS_KEY = "smartFarmFields";
-const ACTIVE_FIELD_KEY = "smartFarmActiveField";
-
-// ── Field management ──
-function loadFields() {
-  try { return JSON.parse(localStorage.getItem(FIELDS_KEY) || "[]"); }
-  catch (_) { return []; }
-}
-
-function saveFields(fields) {
-  localStorage.setItem(FIELDS_KEY, JSON.stringify(fields));
-}
-
-function getActiveFieldId() {
-  return localStorage.getItem(ACTIVE_FIELD_KEY) || null;
-}
-
-function setActiveFieldId(id) {
-  localStorage.setItem(ACTIVE_FIELD_KEY, id);
-}
-
-function createField(name) {
-  const id = `field-${Date.now()}`;
-  const fields = loadFields();
-  fields.push({ id, name });
-  saveFields(fields);
-  setActiveFieldId(id);
-  return id;
-}
-
-function deleteField(id) {
-  const fields = loadFields().filter(f => f.id !== id);
-  saveFields(fields);
-  localStorage.removeItem(`${LEGACY_SETUP_KEY_BASE}:${id}`);
-  localStorage.removeItem(`${LOCAL_TASKS_KEY_BASE}:${id}`);
-  if (getActiveFieldId() === id) {
-    setActiveFieldId(fields[0]?.id || null);
-  }
-}
-
-function getFieldStorageSuffix() {
-  const id = getActiveFieldId();
-  return id ? id : getScopeId();
-}
+const PLANTS_LOCAL_KEY = "plantCareLocalPlants";
+const TASKS_LOCAL_KEY = "plantCareLocalTaskHistory";
+const CLOUD_MIGRATED_KEY_PREFIX = "plantCareCloudMigrated";
 
 const cropLabelsKa = {
   maize:       "სიმინდი",
@@ -92,6 +49,10 @@ const cropLabelsKa = {
 };
 
 const taskLabelsKa = {
+  water: "მორწყვა დასრულდა",
+  fertilize: "სასუქის შეტანა დასრულდა",
+  repot: "გადარგვა დასრულდა",
+  // legacy farm task keys — kept so old task_history rows still render a label
   watering: "მორწყვა დასრულდა",
   spraying: "შეწამვლა დასრულდა",
   inspection: "შემოწმება შესრულდა"
@@ -114,7 +75,7 @@ const deviceId = getOrCreateDeviceId();
 
 const appConfig = window.APP_CONFIG || {};
 let supabaseClient = null;
-let syncModeLabel = "ლოკალური";
+let syncModeLabel = "შესვლა სინქრონიზაციისთვის";
 let supabaseReady = false;
 let currentUser = null;
 
@@ -128,12 +89,28 @@ if (
     supabaseClient = window.supabase.createClient(appConfig.supabaseUrl, appConfig.supabaseAnonKey);
   } catch (_) {
     supabaseClient = null;
-    syncModeLabel = "ლოკალური";
   }
+}
+
+// Anonymous sessions never talk to Supabase — user_plants/task_history RLS
+// requires auth.uid() = user_id, so an anon request can never read or write
+// anything there anyway. Only a logged-in session goes to the cloud.
+function isInfraError(status) {
+  return !status || status >= 500;
+}
+
+function logSupabaseError(table, operation, error) {
+  console.error(`[Supabase] ${table} ${operation} failed:`, error?.message || error);
 }
 
 function setSyncBadge() {
   outSync.textContent = syncModeLabel;
+}
+
+function setLoggedOutMode() {
+  supabaseReady = false;
+  syncModeLabel = "შესვლა სინქრონიზაციისთვის";
+  setSyncBadge();
 }
 
 function setLocalMode(reason) {
@@ -146,19 +123,6 @@ function setCloudMode() {
   supabaseReady = true;
   syncModeLabel = "ქლაუდი (Supabase)";
   setSyncBadge();
-}
-
-function getScopeId() {
-  if (currentUser?.id) return `user:${currentUser.id}`;
-  return `device:${deviceId}`;
-}
-
-function getSetupStorageKey() {
-  return `${LEGACY_SETUP_KEY_BASE}:${getFieldStorageSuffix()}`;
-}
-
-function getTaskStorageKey() {
-  return `${LOCAL_TASKS_KEY_BASE}:${getFieldStorageSuffix()}`;
 }
 
 function setAuthStatusText(text) {
@@ -183,18 +147,51 @@ function renderAuthUI() {
 }
 
 async function verifySupabaseConnection() {
-  if (!supabaseClient) {
-    setLocalMode();
+  if (!currentUser) {
+    setLoggedOutMode();
     return;
   }
 
-  const { error } = await supabaseClient.from("farm_profiles").select("device_id").limit(1);
-  if (error) {
-    setLocalMode("ქლაუდი მიუწვდომელია");
+  if (!supabaseClient) {
+    setLocalMode("Supabase არ არის კონფიგურირებული");
     return;
+  }
+
+  const { error, status } = await supabaseClient.from("user_plants").select("id").limit(1);
+
+  if (error) {
+    logSupabaseError("user_plants", "connectivity-check", error);
+    if (isInfraError(status)) {
+      setLocalMode("ქლაუდი მიუწვდომელია");
+      return;
+    }
   }
 
   setCloudMode();
+}
+
+async function migrateLocalPlantsToCloud() {
+  if (!currentUser || !supabaseClient) return;
+
+  const flagKey = `${CLOUD_MIGRATED_KEY_PREFIX}:${currentUser.id}`;
+  if (localStorage.getItem(flagKey)) return;
+
+  const localPlants = readLocalPlants();
+  if (!localPlants.length) {
+    localStorage.setItem(flagKey, "1");
+    return;
+  }
+
+  const rows = localPlants.map(({ id, ...rest }) => ({ device_id: deviceId, ...rest }));
+  const { error } = await supabaseClient.from("user_plants").insert(rows);
+
+  if (error) {
+    logSupabaseError("user_plants", "migrate-insert", error);
+    return; // leave the flag unset so we retry on next login/reload
+  }
+
+  localStorage.setItem(flagKey, "1");
+  writeLocalPlants([]);
 }
 
 async function initAuth() {
@@ -207,11 +204,15 @@ async function initAuth() {
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data?.session?.user || null;
   renderAuthUI();
+  if (currentUser) await migrateLocalPlantsToCloud();
 
   supabaseClient.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user || null;
     renderAuthUI();
-    void reloadDataForCurrentScope();
+    void (async () => {
+      if (currentUser) await migrateLocalPlantsToCloud();
+      await reloadDataForCurrentScope();
+    })();
   });
 }
 
@@ -269,7 +270,7 @@ function formatDateTimeKa(date) {
 }
 
 function readLocalTaskHistory() {
-  const raw = localStorage.getItem(getTaskStorageKey());
+  const raw = localStorage.getItem(TASKS_LOCAL_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -280,7 +281,7 @@ function readLocalTaskHistory() {
 }
 
 function writeLocalTaskHistory(items) {
-  localStorage.setItem(getTaskStorageKey(), JSON.stringify(items));
+  localStorage.setItem(TASKS_LOCAL_KEY, JSON.stringify(items));
 }
 
 function renderTaskHistory(items) {
@@ -296,24 +297,26 @@ function renderTaskHistory(items) {
 }
 
 async function loadTaskHistory() {
-  if (!supabaseClient || !supabaseReady) return readLocalTaskHistory();
+  if (!currentUser) return readLocalTaskHistory();
+  if (!supabaseClient) return [];
 
-  const { data, error } = await supabaseClient
+  const { data, error, status } = await supabaseClient
     .from("task_history")
-    .select("task_key,label,created_at")
-    .eq("device_id", getScopeId())
+    .select("task_key,label,created_at,plant_id")
     .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) {
-    setLocalMode("ჩაწერა ვერ მოხერხდა");
-    return readLocalTaskHistory();
+    logSupabaseError("task_history", "select", error);
+    if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
+    return [];
   }
 
   return (data || []).map((row) => ({
     task: row.task_key,
     label: row.label || taskLabelsKa[row.task_key] || row.task_key,
-    time: formatDateTimeKa(new Date(row.created_at))
+    time: formatDateTimeKa(new Date(row.created_at)),
+    plantId: row.plant_id || null
   }));
 }
 
@@ -322,75 +325,123 @@ async function refreshTaskHistory() {
   renderTaskHistory(items);
 }
 
-async function addTaskRecord(taskKey) {
-  const record = {
-    task: taskKey,
-    label: taskLabelsKa[taskKey] || taskKey,
-    time: formatDateTimeKa(new Date())
-  };
+async function addTaskRecord(taskKey, plantId) {
+  const label = taskLabelsKa[taskKey] || taskKey;
+  const record = { task: taskKey, label, time: formatDateTimeKa(new Date()), plantId: plantId || null };
 
-  const localItems = readLocalTaskHistory();
-  localItems.unshift(record);
-  writeLocalTaskHistory(localItems.slice(0, 50));
+  if (!currentUser) {
+    const items = readLocalTaskHistory();
+    items.unshift(record);
+    writeLocalTaskHistory(items.slice(0, 50));
+    await refreshTaskHistory();
+    return;
+  }
 
-  if (supabaseClient && supabaseReady) {
-    const { error } = await supabaseClient.from("task_history").insert({
-      device_id: getScopeId(),
+  if (supabaseClient) {
+    const { error, status } = await supabaseClient.from("task_history").insert({
+      device_id: deviceId,
       task_key: taskKey,
-      label: record.label
+      label,
+      plant_id: plantId || null
     });
-    if (error) setLocalMode("ქლაუდი ვერ ჩაიწერა");
+
+    if (error) {
+      logSupabaseError("task_history", "insert", error);
+      if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
+    }
   }
 
   await refreshTaskHistory();
 }
 
-async function saveSetup(data) {
-  localStorage.setItem(getSetupStorageKey(), JSON.stringify(data));
-
-  if (!supabaseClient || !supabaseReady) return;
-
-  const { error } = await supabaseClient.from("farm_profiles").upsert(
-    {
-      device_id: getScopeId(),
-      crop: data.crop,
-      location: data.location,
-      planting_date: data.plantingDate,
-      farm_size: data.farmSize || 0
-    },
-    { onConflict: "device_id" }
-  );
-  if (error) setLocalMode("პროფილი ვერ ჩაიწერა");
+// ── user_plants (PlantCare) ─────────────────────────────────────────────
+function readLocalPlants() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PLANTS_LOCAL_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
 }
 
-async function loadSetup() {
-  if (supabaseClient && supabaseReady) {
-    const { data, error } = await supabaseClient
-      .from("farm_profiles")
-      .select("crop,location,planting_date")
-      .eq("device_id", getScopeId())
-      .maybeSingle();
+function writeLocalPlants(plants) {
+  localStorage.setItem(PLANTS_LOCAL_KEY, JSON.stringify(plants));
+}
 
-    if (!error && data?.crop && data?.location && data?.planting_date) {
-      return {
-        crop: String(data.crop).trim(),
-        location: String(data.location).trim(),
-        plantingDate: String(data.planting_date).trim()
-      };
-    }
+async function listUserPlants() {
+  if (!currentUser) return readLocalPlants();
+  if (!supabaseClient) return [];
+
+  const { data, error, status } = await supabaseClient
+    .from("user_plants")
+    .select("*")
+    .order("added_at", { ascending: true });
+
+  if (error) {
+    logSupabaseError("user_plants", "select", error);
+    if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
+    return [];
   }
 
-  const saved = localStorage.getItem(getSetupStorageKey());
-  if (!saved) return null;
+  return data || [];
+}
 
-  try {
-    const parsed = JSON.parse(saved);
-    if (!parsed.crop || !parsed.location || !parsed.plantingDate) return null;
-    return parsed;
-  } catch (_) {
-    localStorage.removeItem(getSetupStorageKey());
+async function addUserPlant(plant) {
+  if (!currentUser) {
+    const local = readLocalPlants();
+    const withId = {
+      id: `local-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+      added_at: new Date().toISOString(),
+      ...plant
+    };
+    local.push(withId);
+    writeLocalPlants(local);
+    return withId;
+  }
+
+  if (!supabaseClient) return null;
+
+  const { data, error, status } = await supabaseClient
+    .from("user_plants")
+    .insert({ device_id: deviceId, ...plant })
+    .select()
+    .single();
+
+  if (error) {
+    logSupabaseError("user_plants", "insert", error);
+    if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
     return null;
   }
+
+  return data;
+}
+
+async function updateUserPlant(plantId, patch) {
+  if (!currentUser) {
+    const local = readLocalPlants();
+    const idx = local.findIndex((p) => p.id === plantId);
+    if (idx === -1) return null;
+    local[idx] = { ...local[idx], ...patch };
+    writeLocalPlants(local);
+    return local[idx];
+  }
+
+  if (!supabaseClient) return null;
+
+  const { data, error, status } = await supabaseClient
+    .from("user_plants")
+    .update(patch)
+    .eq("id", plantId)
+    .select()
+    .single();
+
+  if (error) {
+    logSupabaseError("user_plants", "update", error);
+    if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
+    return null;
+  }
+
+  return data;
 }
 
 const mockWeatherByLocation = {
