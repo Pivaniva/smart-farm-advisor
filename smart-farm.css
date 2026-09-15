@@ -268,7 +268,8 @@ body {
   gap: 10px;
 }
 
-.login-modal-form input {
+.login-modal-form input,
+.login-modal-form select {
   font: inherit;
   font-size: .95rem;
   border: 1.5px solid var(--border);
@@ -279,7 +280,8 @@ body {
   color: var(--ink);
 }
 
-.login-modal-form input:focus {
+.login-modal-form input:focus,
+.login-modal-form select:focus {
   outline: none;
   border-color: var(--green-600);
 }
@@ -771,12 +773,14 @@ input::placeholder { color: var(--muted-2); }
 
 .verdict-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
   padding: 16px 20px;
 }
 
 .verdict-item + .verdict-item { border-top: 1px solid var(--border); }
+
+.verdict-body { flex: 1; min-width: 0; }
 
 .verdict-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
 

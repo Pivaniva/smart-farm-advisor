@@ -1,7 +1,7 @@
 {
-  "name": "SmartFarm — ჭკვიანი ფერმერი",
-  "short_name": "SmartFarm",
-  "description": "ყოველდღიური სოფლის მეურნეობის ასისტენტი",
+  "name": "PlantCare — მცენარეების მოვლა",
+  "short_name": "PlantCare",
+  "description": "ყოველდღიური სახლის მცენარეების მოვლის ასისტენტი",
   "start_url": "/smart-farm-advisor/",
   "scope": "/smart-farm-advisor/",
   "display": "standalone",

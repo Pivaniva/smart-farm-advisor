@@ -1,4 +1,4 @@
-const setupForm = document.getElementById("setup-form");
+const plantForm = document.getElementById("plant-form");
 const setupPanel = document.getElementById("setup-panel");
 const dashboardPanel = document.getElementById("dashboard-panel");
 const editBtn = document.getElementById("edit-btn");
@@ -9,44 +9,14 @@ const logoutBtn = document.getElementById("logout-btn");
 
 const outCrop = document.getElementById("out-crop");
 const outLocation = document.getElementById("out-location");
-const outWeather = document.getElementById("out-weather");
 const outSync = document.getElementById("out-sync");
-const outStage = document.getElementById("out-stage");
 const outWatering = document.getElementById("out-watering");
-const outRisk = document.getElementById("out-risk");
-const outSpraying = document.getElementById("out-spraying");
-const outFertilizer = document.getElementById("out-fertilizer");
-const outPesticide = document.getElementById("out-pesticide");
-const outAlert = document.getElementById("out-alert");
-const taskButtons = document.querySelectorAll(".task-btn");
 const taskHistory = document.getElementById("task-history");
 
 const DEVICE_ID_KEY = "smartFarmDeviceId";
 const PLANTS_LOCAL_KEY = "plantCareLocalPlants";
 const TASKS_LOCAL_KEY = "plantCareLocalTaskHistory";
 const CLOUD_MIGRATED_KEY_PREFIX = "plantCareCloudMigrated";
-
-const cropLabelsKa = {
-  maize:       "სიმინდი",
-  wheat:       "ხორბალი",
-  tomato:      "პომიდორი",
-  potato:      "კარტოფილი",
-  rice:        "ბრინჯი",
-  vine:        "ვაზი (ღვინო)",
-  nuts:        "თხილი/კაკალი",
-  sunflower:   "მზესუმზირა",
-  onion:       "ხახვი",
-  garlic:      "ნიორი",
-  pepper:      "წიწაკა",
-  cucumber:    "კიტრი",
-  watermelon:  "საზამთრო",
-  cabbage:     "კომბოსტო",
-  carrot:      "სტაფილო",
-  strawberry:  "მარწყვი",
-  apple:       "ვაშლი",
-  peach:       "ატამი",
-  bean:        "მხალი/ლობიო"
-};
 
 const taskLabelsKa = {
   water: "მორწყვა დასრულდა",
@@ -245,18 +215,7 @@ async function logout() {
 async function reloadDataForCurrentScope() {
   await verifySupabaseConnection();
   await refreshTaskHistory();
-
-  const data = await loadSetup();
-  if (!data) {
-    dashboardPanel.classList.add("hidden");
-    setupPanel.classList.remove("hidden");
-    return;
-  }
-
-  document.getElementById("crop").value = data.crop;
-  document.getElementById("location").value = data.location;
-  document.getElementById("planting-date").value = data.plantingDate;
-  await renderDashboard(data);
+  await loadAndShowPlants();
 }
 
 function formatDateTimeKa(date) {
@@ -444,505 +403,8 @@ async function updateUserPlant(plantId, patch) {
   return data;
 }
 
-const mockWeatherByLocation = {
-  tbilisi: { tempC: 28, humidity: 72, rainMm: 0, condition: "ცხელი და მშრალი" },
-  kutaisi: { tempC: 24, humidity: 84, rainMm: 6, condition: "ტენიანი და წვიმიანი" },
-  batumi: { tempC: 23, humidity: 90, rainMm: 12, condition: "ძალიან ტენიანი" },
-  default: { tempC: 26, humidity: 70, rainMm: 2, condition: "თბილი ამინდი" }
-};
 
-const georgiaCityCoordinates = {
-  "თბილისი": { latitude: 41.7151, longitude: 44.8271 },
-  tbilisi: { latitude: 41.7151, longitude: 44.8271 },
-  "ქუთაისი": { latitude: 42.2679, longitude: 42.6946 },
-  kutaisi: { latitude: 42.2679, longitude: 42.6946 },
-  "ბათუმი": { latitude: 41.6168, longitude: 41.6367 },
-  batumi: { latitude: 41.6168, longitude: 41.6367 },
-  "რუსთავი": { latitude: 41.5495, longitude: 44.9932 },
-  rustavi: { latitude: 41.5495, longitude: 44.9932 },
-  "ზუგდიდი": { latitude: 42.5113, longitude: 41.8709 },
-  zugdidi: { latitude: 42.5113, longitude: 41.8709 },
-  "თელავი": { latitude: 41.9175, longitude: 45.4742 },
-  telavi: { latitude: 41.9175, longitude: 45.4742 },
-  "გორი": { latitude: 41.9855, longitude: 44.1131 },
-  gori: { latitude: 41.9855, longitude: 44.1131 },
-  "ახალციხე": { latitude: 41.6401, longitude: 42.9841 },
-  akhaltsikhe: { latitude: 41.6401, longitude: 42.9841 },
-  "ოზურგეთი": { latitude: 41.9197, longitude: 42.0079 },
-  ozurgeti: { latitude: 41.9197, longitude: 42.0079 },
-  "სამტრედია": { latitude: 42.1553, longitude: 42.3394 },
-  samtredia: { latitude: 42.1553, longitude: 42.3394 },
-  "სენაკი": { latitude: 42.2681, longitude: 42.0587 },
-  senaki: { latitude: 42.2681, longitude: 42.0587 },
-  "ზესტაფონი": { latitude: 42.1081, longitude: 43.0465 },
-  zestaponi: { latitude: 42.1081, longitude: 43.0465 },
-  "მარნეული": { latitude: 41.4636, longitude: 44.8026 },
-  marneuli: { latitude: 41.4636, longitude: 44.8026 },
-  "ხაშური": { latitude: 41.9948, longitude: 43.5927 },
-  khashuri: { latitude: 41.9948, longitude: 43.5927 },
-  "ბოლნისი": { latitude: 41.4459, longitude: 44.5288 },
-  bolnisi: { latitude: 41.4459, longitude: 44.5288 },
-  "სიღნაღი": { latitude: 41.6207, longitude: 45.9194 },
-  signagi: { latitude: 41.6207, longitude: 45.9194 },
-  "ლაგოდეხი": { latitude: 41.8279, longitude: 46.2756 },
-  lagodekhi: { latitude: 41.8279, longitude: 46.2756 },
-  "გურჯაანი": { latitude: 41.7432, longitude: 45.7952 },
-  gurjaani: { latitude: 41.7432, longitude: 45.7952 },
-  "კახი": { latitude: 41.6358, longitude: 46.2891 },
-  kakheti: { latitude: 41.6358, longitude: 46.2891 }
-};
-
-function weatherCodeToText(code) {
-  const map = {
-    0: "მოწმენდილი ცა",
-    1: "ძირითადად მოწმენდილი",
-    2: "ნაწილობრივ მოღრუბლული",
-    3: "ღრუბლიანი",
-    45: "ნისლი",
-    48: "ინელი ნისლი",
-    51: "სუსტი ჟინჟღლი",
-    53: "ჟინჟღლი",
-    55: "ძლიერი ჟინჟღლი",
-    61: "სუსტი წვიმა",
-    63: "წვიმა",
-    65: "ძლიერი წვიმა",
-    71: "სუსტი თოვა",
-    73: "თოვა",
-    75: "ძლიერი თოვა",
-    95: "ჭექა-ქუხილი"
-  };
-  return map[code] || "ცვალებადი პირობები";
-}
-
-const harvestDaysByCrop = {
-  maize:      { min: 90,  max: 120 },
-  wheat:      { min: 110, max: 130 },
-  tomato:     { min: 70,  max: 100 },
-  potato:     { min: 80,  max: 110 },
-  rice:       { min: 110, max: 150 },
-  vine:       { min: 140, max: 180 },
-  nuts:       { min: 150, max: 200 },
-  sunflower:  { min: 80,  max: 110 },
-  onion:      { min: 90,  max: 120 },
-  garlic:     { min: 90,  max: 110 },
-  pepper:     { min: 70,  max: 100 },
-  cucumber:   { min: 45,  max: 65  },
-  watermelon: { min: 70,  max: 90  },
-  cabbage:    { min: 70,  max: 100 },
-  carrot:     { min: 70,  max: 100 },
-  strawberry: { min: 30,  max: 60  },
-  apple:      { min: 130, max: 180 },
-  peach:      { min: 90,  max: 130 },
-  bean:       { min: 55,  max: 80  }
-};
-
-function estimateHarvestDate(crop, plantingDate) {
-  const h = harvestDaysByCrop[crop] || { min: 90, max: 120 };
-  const planting = new Date(plantingDate);
-  const midDays = Math.round((h.min + h.max) / 2);
-  const earliest = new Date(planting); earliest.setDate(planting.getDate() + h.min);
-  const latest   = new Date(planting); latest.setDate(planting.getDate() + h.max);
-  const fmt = (d) => new Intl.DateTimeFormat("ka-GE", { day: "numeric", month: "long" }).format(d);
-  const today = new Date();
-  const daysLeft = Math.ceil((new Date(planting.getTime() + midDays * 86400000) - today) / 86400000);
-  return { earliest: fmt(earliest), latest: fmt(latest), daysLeft };
-}
-
-const growthByCrop = {
-  maize: [
-    { maxDay: 10, stage: "გაღივება" },
-    { maxDay: 35, stage: "ვეგეტაცია" },
-    { maxDay: 65, stage: "ყვავილობა" },
-    { maxDay: 110, stage: "მარცვლის შევსება" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  wheat: [
-    { maxDay: 12, stage: "გაღივება" },
-    { maxDay: 40, stage: "კოკრიანობა" },
-    { maxDay: 75, stage: "ღეროს ზრდა" },
-    { maxDay: 110, stage: "თავთავის გამოსვლა" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  tomato: [
-    { maxDay: 14, stage: "ჩითილი" },
-    { maxDay: 40, stage: "ვეგეტაცია" },
-    { maxDay: 70, stage: "ყვავილობა" },
-    { maxDay: 100, stage: "ნაყოფის შეკვრა" },
-    { maxDay: 9999, stage: "მოსავლის აღება" }
-  ],
-  potato: [
-    { maxDay: 12, stage: "აღმონაცენი" },
-    { maxDay: 35, stage: "ვეგეტაცია" },
-    { maxDay: 60, stage: "ტუბერის წარმოქმნა" },
-    { maxDay: 90, stage: "ტუბერის ზრდა" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  rice: [
-    { maxDay: 15, stage: "ჩითილი" },
-    { maxDay: 45, stage: "კოკრიანობა" },
-    { maxDay: 75, stage: "თავთავის ფორმირება" },
-    { maxDay: 105, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  vine: [
-    { maxDay: 25, stage: "კვირტის გაშლა" },
-    { maxDay: 60, stage: "ვეგეტაცია" },
-    { maxDay: 95, stage: "ყვავილობა" },
-    { maxDay: 130, stage: "მტევნის ზრდა" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  nuts: [
-    { maxDay: 25, stage: "კვირტის გაშლა" },
-    { maxDay: 70, stage: "ვეგეტაცია" },
-    { maxDay: 110, stage: "ყვავილობა/ნაყოფის შეკვრა" },
-    { maxDay: 150, stage: "ნაყოფის შევსება" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  sunflower: [
-    { maxDay: 10, stage: "გაღივება" },
-    { maxDay: 35, stage: "ვეგეტაცია" },
-    { maxDay: 65, stage: "კვირტის წარმოქმნა" },
-    { maxDay: 90, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  onion: [
-    { maxDay: 15, stage: "გაღივება" },
-    { maxDay: 45, stage: "ვეგეტაცია" },
-    { maxDay: 80, stage: "ბოლქვის წარმოქმნა" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  garlic: [
-    { maxDay: 15, stage: "გაღივება" },
-    { maxDay: 50, stage: "ვეგეტაცია" },
-    { maxDay: 80, stage: "კბილების წარმოქმნა" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  pepper: [
-    { maxDay: 14, stage: "ჩითილი" },
-    { maxDay: 40, stage: "ვეგეტაცია" },
-    { maxDay: 65, stage: "ყვავილობა" },
-    { maxDay: 90, stage: "ნაყოფის შეკვრა" },
-    { maxDay: 9999, stage: "მოსავლის აღება" }
-  ],
-  cucumber: [
-    { maxDay: 10, stage: "გაღივება" },
-    { maxDay: 25, stage: "ვეგეტაცია" },
-    { maxDay: 40, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "მოსავლის აღება" }
-  ],
-  watermelon: [
-    { maxDay: 12, stage: "გაღივება" },
-    { maxDay: 35, stage: "ვეგეტაცია" },
-    { maxDay: 55, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "ნაყოფის სიმწიფე" }
-  ],
-  cabbage: [
-    { maxDay: 14, stage: "ჩითილი" },
-    { maxDay: 40, stage: "ვეგეტაცია" },
-    { maxDay: 70, stage: "თავის წარმოქმნა" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  carrot: [
-    { maxDay: 14, stage: "გაღივება" },
-    { maxDay: 45, stage: "ვეგეტაცია" },
-    { maxDay: 75, stage: "ძირის გასქელება" },
-    { maxDay: 9999, stage: "სიმწიფე" }
-  ],
-  strawberry: [
-    { maxDay: 14, stage: "ადაპტაცია" },
-    { maxDay: 30, stage: "ვეგეტაცია" },
-    { maxDay: 45, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "ნაყოფის სიმწიფე" }
-  ],
-  apple: [
-    { maxDay: 30, stage: "კვირტის გაშლა" },
-    { maxDay: 70, stage: "ყვავილობა" },
-    { maxDay: 120, stage: "ნაყოფის ზრდა" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  peach: [
-    { maxDay: 25, stage: "კვირტის გაშლა" },
-    { maxDay: 60, stage: "ყვავილობა" },
-    { maxDay: 100, stage: "ნაყოფის ზრდა" },
-    { maxDay: 9999, stage: "მომწიფება" }
-  ],
-  bean: [
-    { maxDay: 10, stage: "გაღივება" },
-    { maxDay: 30, stage: "ვეგეტაცია" },
-    { maxDay: 50, stage: "ყვავილობა" },
-    { maxDay: 9999, stage: "მოსავლის აღება" }
-  ]
-};
-
-const gddByCrop = {
-  maize: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 120, stage: "გაღივება" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 850, stage: "ყვავილობა" },
-      { maxGdd: 1200, stage: "მარცვლის შევსება" },
-      { maxGdd: 9999, stage: "სიმწიფე" }
-    ]
-  },
-  wheat: {
-    baseTemp: 5,
-    stages: [
-      { maxGdd: 100, stage: "გაღივება" },
-      { maxGdd: 450, stage: "კოკრიანობა" },
-      { maxGdd: 800, stage: "ღეროს ზრდა" },
-      { maxGdd: 1100, stage: "თავთავის გამოსვლა" },
-      { maxGdd: 9999, stage: "მომწიფება" }
-    ]
-  },
-  tomato: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 150, stage: "ჩითილი" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 850, stage: "ყვავილობა" },
-      { maxGdd: 1200, stage: "ნაყოფის შეკვრა" },
-      { maxGdd: 9999, stage: "მოსავლის აღება" }
-    ]
-  },
-  potato: {
-    baseTemp: 7,
-    stages: [
-      { maxGdd: 120, stage: "აღმონაცენი" },
-      { maxGdd: 420, stage: "ვეგეტაცია" },
-      { maxGdd: 750, stage: "ტუბერის წარმოქმნა" },
-      { maxGdd: 1000, stage: "ტუბერის ზრდა" },
-      { maxGdd: 9999, stage: "სიმწიფე" }
-    ]
-  },
-  rice: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 180, stage: "ჩითილი" },
-      { maxGdd: 500, stage: "კოკრიანობა" },
-      { maxGdd: 850, stage: "თავთავის ფორმირება" },
-      { maxGdd: 1150, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "მომწიფება" }
-    ]
-  },
-  vine: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 220, stage: "კვირტის გაშლა" },
-      { maxGdd: 650, stage: "ვეგეტაცია" },
-      { maxGdd: 980, stage: "ყვავილობა" },
-      { maxGdd: 1300, stage: "მტევნის ზრდა" },
-      { maxGdd: 9999, stage: "მომწიფება" }
-    ]
-  },
-  nuts: {
-    baseTemp: 8,
-    stages: [
-      { maxGdd: 200, stage: "კვირტის გაშლა" },
-      { maxGdd: 620, stage: "ვეგეტაცია" },
-      { maxGdd: 980, stage: "ყვავილობა/ნაყოფის შეკვრა" },
-      { maxGdd: 1300, stage: "ნაყოფის შევსება" },
-      { maxGdd: 9999, stage: "მომწიფება" }
-    ]
-  },
-  sunflower: {
-    baseTemp: 8,
-    stages: [
-      { maxGdd: 100, stage: "გაღივება" },
-      { maxGdd: 450, stage: "ვეგეტაცია" },
-      { maxGdd: 750, stage: "კვირტის წარმოქმნა" },
-      { maxGdd: 9999, stage: "ყვავილობა/სიმწიფე" }
-    ]
-  },
-  onion: {
-    baseTemp: 7,
-    stages: [
-      { maxGdd: 130, stage: "გაღივება" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 9999, stage: "ბოლქვის სიმწიფე" }
-    ]
-  },
-  garlic: {
-    baseTemp: 5,
-    stages: [
-      { maxGdd: 120, stage: "გაღივება" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 9999, stage: "კბილების სიმწიფე" }
-    ]
-  },
-  pepper: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 150, stage: "ჩითილი" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 800, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "ნაყოფის სიმწიფე" }
-    ]
-  },
-  cucumber: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 100, stage: "გაღივება" },
-      { maxGdd: 350, stage: "ვეგეტაცია" },
-      { maxGdd: 9999, stage: "მოსავლის აღება" }
-    ]
-  },
-  watermelon: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 120, stage: "გაღივება" },
-      { maxGdd: 450, stage: "ვეგეტაცია" },
-      { maxGdd: 750, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "ნაყოფის სიმწიფე" }
-    ]
-  },
-  cabbage: {
-    baseTemp: 5,
-    stages: [
-      { maxGdd: 130, stage: "ჩითილი" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 9999, stage: "თავის სიმწიფე" }
-    ]
-  },
-  carrot: {
-    baseTemp: 7,
-    stages: [
-      { maxGdd: 130, stage: "გაღივება" },
-      { maxGdd: 500, stage: "ვეგეტაცია" },
-      { maxGdd: 9999, stage: "ძირის სიმწიფე" }
-    ]
-  },
-  strawberry: {
-    baseTemp: 5,
-    stages: [
-      { maxGdd: 100, stage: "ადაპტაცია" },
-      { maxGdd: 300, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "ნაყოფის სიმწიფე" }
-    ]
-  },
-  apple: {
-    baseTemp: 5,
-    stages: [
-      { maxGdd: 250, stage: "კვირტის გაშლა" },
-      { maxGdd: 700, stage: "ყვავილობა" },
-      { maxGdd: 1200, stage: "ნაყოფის ზრდა" },
-      { maxGdd: 9999, stage: "მომწიფება" }
-    ]
-  },
-  peach: {
-    baseTemp: 7,
-    stages: [
-      { maxGdd: 220, stage: "კვირტის გაშლა" },
-      { maxGdd: 600, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "ნაყოფის სიმწიფე" }
-    ]
-  },
-  bean: {
-    baseTemp: 10,
-    stages: [
-      { maxGdd: 100, stage: "გაღივება" },
-      { maxGdd: 350, stage: "ვეგეტაცია" },
-      { maxGdd: 600, stage: "ყვავილობა" },
-      { maxGdd: 9999, stage: "მოსავლის აღება" }
-    ]
-  }
-};
-
-function daysSincePlanting(plantingDate) {
-  const start = new Date(plantingDate);
-  const now = new Date();
-  const diffMs = now - start;
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-}
-
-function getStage(crop, dayCount) {
-  const stages = growthByCrop[crop] || growthByCrop.maize;
-  return stages.find((s) => dayCount <= s.maxDay)?.stage || "უცნობია";
-}
-
-function getWeather(location) {
-  const key = location.trim().toLowerCase();
-  return mockWeatherByLocation[key] || mockWeatherByLocation.default;
-}
-
-function normalizeLocation(input) {
-  return String(input || "").trim().toLowerCase();
-}
-
-async function geocodeLocation(name, language) {
-  const url =
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}` +
-    `&count=1&language=${language}&format=json`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const place = data?.results?.[0];
-  if (!place) return null;
-  return { latitude: place.latitude, longitude: place.longitude };
-}
-
-async function fetchCoordinates(location) {
-  const normalized = normalizeLocation(location);
-  if (georgiaCityCoordinates[normalized]) return georgiaCityCoordinates[normalized];
-
-  const kaResult = await geocodeLocation(location, "ka");
-  if (kaResult) return kaResult;
-
-  const enResult = await geocodeLocation(location, "en");
-  if (enResult) return enResult;
-
-  throw new Error("მდებარეობა ვერ მოიძებნა");
-}
-
-async function fetchLiveWeather(location) {
-  const place = await fetchCoordinates(location);
-  const weatherUrl =
-    `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}` +
-    `&longitude=${place.longitude}` +
-    `&current=temperature_2m,relative_humidity_2m,weather_code` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum` +
-    `&timezone=auto&forecast_days=7`;
-
-  const weatherRes = await fetch(weatherUrl);
-  if (!weatherRes.ok) throw new Error("Weather request failed");
-
-  const weatherData = await weatherRes.json();
-  const current = weatherData.current || {};
-  const daily = weatherData.daily || {};
-
-  const forecast = (daily.time || []).map((date, i) => ({
-    date,
-    code:   Number(daily.weather_code?.[i] ?? 0),
-    maxC:   Number(daily.temperature_2m_max?.[i] ?? 0),
-    minC:   Number(daily.temperature_2m_min?.[i] ?? 0),
-    rainMm: Number(daily.precipitation_sum?.[i] ?? 0),
-  }));
-
-  return {
-    tempC: Number(current.temperature_2m ?? 26),
-    humidity: Number(current.relative_humidity_2m ?? 70),
-    rainMm: Number(daily.precipitation_sum?.[0] ?? 0),
-    condition: weatherCodeToText(Number(current.weather_code ?? 2)),
-    source: "ამჟამინდელი ამინდი",
-    forecast
-  };
-}
-
-function weatherCodeToEmoji(code) {
-  if (code === 0 || code === 1) return "☀️";
-  if (code === 2) return "⛅";
-  if (code === 3) return "☁️";
-  if (code >= 45 && code <= 48) return "🌫️";
-  if (code >= 51 && code <= 67) return "🌧️";
-  if (code >= 71 && code <= 77) return "❄️";
-  if (code >= 80 && code <= 82) return "🌦️";
-  if (code >= 95) return "⛈️";
-  return "🌤️";
-}
-
-// ── Crop protection & nutrition schedules ────────────────────────────────────
-// Source: Georgian MoA recommendations, LEPL Scientific Research Centre of Agriculture
-// Each row: { stage, days, fungicide, insecticide, fertilizer, notes }
+// ── PlantCare catalog ──────────────────────────────────────────────────────
 const PLANT_CATALOG = {
   monstera: {
     georgian_name: "მონსტერა",
@@ -1286,797 +748,362 @@ const PLANT_CATALOG = {
   },
 };
 
-// ── Product price database (Georgian market 2024-2025) ────────────────────────
-// price = ₾ per package; coverageHa = ჰა per package
-const PRODUCT_PRICES = {
-  // ── ფუნგიციდები ──
-  ridomil:    { name: "რიდომილ გოლდი",  cat: "🍄 ფუნგიციდი",   price: 50,  unit: "შეფ. (400გ)", coverageHa: 0.4 },
-  score:      { name: "სკორი",           cat: "🍄 ფუნგიციდი",   price: 48,  unit: "100მლ",       coverageHa: 1   },
-  horus:      { name: "ჰორუსი",          cat: "🍄 ფუნგიციდი",   price: 40,  unit: "შეფ. (200გ)", coverageHa: 1   },
-  switch_:    { name: "სვიჩი",           cat: "🍄 ფუნგიციდი",   price: 65,  unit: "შეფ. (300გ)", coverageHa: 1   },
-  signum:     { name: "სიგნუმი",         cat: "🍄 ფუნგიციდი",   price: 75,  unit: "შეფ. (1კგ)",  coverageHa: 1   },
-  cuproxat:   { name: "კუპროქსატი",      cat: "🍄 ფუნგიციდი",   price: 45,  unit: "1ლ",          coverageHa: 1   },
-  polyram:    { name: "პოლირამი",        cat: "🍄 ფუნგიციდი",   price: 42,  unit: "შეფ. (1კგ)",  coverageHa: 1   },
-  bordeaux:   { name: "ბორდოს სითხე",   cat: "🍄 ფუნგიციდი",   price: 9,   unit: "1კგ",          coverageHa: 0.1 },
-  fitosporin: { name: "ფიტოსპორინი",    cat: "🍄 ფუნგიციდი",   price: 10,  unit: "შეფ.",         coverageHa: 0.5 },
-  trichoderm: { name: "ტრიქოდერმინი",   cat: "🍄 ფუნგიციდი",   price: 8,   unit: "შეფ.",         coverageHa: 0.5 },
-  // ── ინსექტიციდები ──
-  karate:     { name: "კარატე ზეონი",   cat: "🐛 ინსექტიციდი", price: 32,  unit: "შეფ. (1ლ)",   coverageHa: 1   },
-  confidor:   { name: "კონფიდორი",      cat: "🐛 ინსექტიციდი", price: 38,  unit: "შეფ. (1ლ)",   coverageHa: 1   },
-  mospilan:   { name: "მოსპილანი",      cat: "🐛 ინსექტიციდი", price: 35,  unit: "შეფ. (100გ)", coverageHa: 1   },
-  nomolt:     { name: "ნომოლტი",        cat: "🐛 ინსექტიციდი", price: 50,  unit: "50მლ",         coverageHa: 1   },
-  vertimec:   { name: "ვერტიმეკი",      cat: "🐛 ინსექტიციდი", price: 45,  unit: "500მლ",        coverageHa: 5   },
-  // ── სასუქები ──
-  nitramon:   { name: "ნიტრამონი",      cat: "🌱 სასუქი",      price: 1.5, unit: "1კგ",          coverageHa: 0.0067 }, // ~150კგ/ჰა
-  superph:    { name: "სუპერფოსფატი",   cat: "🌱 სასუქი",      price: 1.1, unit: "1კგ",          coverageHa: 0.01   }, // ~100კგ/ჰა
-  kaliumi:    { name: "კალიუმის სულფ.", cat: "🌱 სასუქი",      price: 2.4, unit: "1კგ",          coverageHa: 0.0125 }, // ~80კგ/ჰა
-  npk:        { name: "NPK 15-15-15",   cat: "🌱 სასუქი",      price: 1.8, unit: "1კგ",          coverageHa: 0.0067 }, // ~150კგ/ჰა
-  kristalon:  { name: "კრისტალონი",     cat: "🌱 სასუქი",      price: 12,  unit: "1კგ",          coverageHa: 0.33   }, // ~3კგ/ჰა
-  bori:       { name: "ბორი",           cat: "🌱 სასუქი",      price: 8,   unit: "100გ",          coverageHa: 0.67   }, // ~150გ/ჰა
+// ── Care interval logic ──────────────────────────────────────────────────
+const WINDOW_LABELS_KA = {
+  north: "ჩრდილოეთი ფანჯარა",
+  south: "სამხრეთი ფანჯარა",
+  east: "აღმოსავლეთი ფანჯარა",
+  west: "დასავლეთი ფანჯარა",
+  none: "ფანჯრის გარეშე"
 };
 
-// Map keywords in schedule text → product keys
-const PRODUCT_KEYWORDS = {
-  ridomil:    ["რიდომილ", "მეტალაქსილ"],
-  score:      ["სკორი", "დიფენოკონაზოლი"],
-  horus:      ["ჰორუსი", "ციპროდინილი"],
-  switch_:    ["სვიჩი", "ფლუდიოქსონილი"],
-  signum:     ["სიგნუმი", "ბოსკალიდი"],
-  cuproxat:   ["კუპროქ", "სპილენძის სულფ"],
-  polyram:    ["პოლირამ", "მეტირამი"],
-  bordeaux:   ["ბორდოს", "სპილენძის ჰიდ"],
-  fitosporin: ["ფიტოსპ", "Bacillus"],
-  trichoderm: ["ტრიქოდერმინი"],
-  karate:     ["კარატე", "ლამბდა-ციჰალოტ"],
-  confidor:   ["კონფიდ", "იმიდაკლოპრიდი"],
-  mospilan:   ["მოსპილანი"],
-  nomolt:     ["ნომოლტ", "ტებუფენოზიდი"],
-  vertimec:   ["ვერტიმ", "აბამექტინი"],
-  nitramon:   ["ნიტრამონი"],
-  superph:    ["სუპერფოსფ"],
-  kaliumi:    ["კალიუმ"],
-  npk:        ["NPK", "15-15-15"],
-  kristalon:  ["კრისტალ"],
-  bori:       ["ბორი"],
-};
-
-function detectProducts(text) {
-  const found = new Set();
-  for (const [key, words] of Object.entries(PRODUCT_KEYWORDS)) {
-    if (words.some(w => text.includes(w))) found.add(key);
-  }
-  return [...found];
+function isSummerSeason(date = new Date()) {
+  const month = date.getMonth() + 1; // 1-12
+  return month >= 3 && month <= 10; // მარტი–ოქტომბერი
 }
 
-const PRICES_CACHE_KEY = "smartFarmPricesCache";
-const PRICES_CACHE_DATE_KEY = "smartFarmPricesCacheDate";
+function getWateringIntervalDays(catalogEntry, windowDirection) {
+  const base = isSummerSeason()
+    ? catalogEntry.watering_interval_days.summer
+    : catalogEntry.watering_interval_days.winter;
 
-async function fetchProductPricesFromDB() {
-  const today = new Date().toISOString().slice(0, 10);
-  const cached = localStorage.getItem(PRICES_CACHE_KEY);
-  const cachedDate = localStorage.getItem(PRICES_CACHE_DATE_KEY);
-  if (cached && cachedDate === today) {
-    return JSON.parse(cached);
-  }
-
-  if (!supabaseClient || !supabaseReady) return null;
-  const { data, error } = await supabaseClient
-    .from("product_prices")
-    .select("key, name, category, price, unit, coverage_ha");
-  if (error || !data?.length) return null;
-
-  // Convert array → object keyed by product key
-  const prices = {};
-  data.forEach(row => {
-    prices[row.key] = {
-      name: row.name,
-      cat: row.category,
-      price: Number(row.price),
-      unit: row.unit,
-      coverageHa: Number(row.coverage_ha),
-    };
-  });
-
-  localStorage.setItem(PRICES_CACHE_KEY, JSON.stringify(prices));
-  localStorage.setItem(PRICES_CACHE_DATE_KEY, today);
-  return prices;
+  if (windowDirection === "south") return Math.max(1, Math.round(base * 0.8));
+  if (windowDirection === "none") return Math.round(base * 1.3);
+  return base;
 }
 
-async function renderCostCalculator(crop, dayCount, farmSize) {
-  const container = document.getElementById("cost-products");
-  const totalEl   = document.getElementById("cost-total");
-  const sizeInput = document.getElementById("calc-size");
-  if (!container || !totalEl) return;
-
-  if (farmSize > 0 && sizeInput) sizeInput.value = farmSize;
-
-  // Fetch live prices; fall back to hardcoded
-  const livePrices = await fetchProductPricesFromDB();
-  const prices = livePrices || PRODUCT_PRICES;
-
-  // Show source in disclaimer
-  const disclaimer = document.querySelector(".cost-disclaimer");
-  if (disclaimer) {
-    const date = new Date().toLocaleDateString("ka-GE");
-    disclaimer.textContent = livePrices
-      ? `✅ ფასები განახლებულია Supabase-დან — ${date}`
-      : `⚠ სავარაუდო ფასები (2024-2025) — Supabase მიუწვდომელია`;
-  }
-
-  // Find current stage products
-  const rows = CROP_SCHEDULES[crop] || [];
-  const activeRow = rows.find(r => dayCount >= r.days[0] && dayCount < r.days[1]);
-  const stageText = activeRow
-    ? `${activeRow.fungicide} ${activeRow.insecticide} ${activeRow.fertilizer}`
-    : "";
-  const suggested = new Set(detectProducts(stageText));
-
-  // Group by category
-  const groups = {};
-  for (const [key, p] of Object.entries(prices)) {
-    if (!groups[p.cat]) groups[p.cat] = [];
-    groups[p.cat].push({ key, ...p, checked: suggested.has(key) });
-  }
-
-  const recalc = () => {
-    const ha = parseFloat(sizeInput?.value || "1") || 1;
-    let total = 0;
-    container.querySelectorAll(".cost-item input[type=checkbox]").forEach(cb => {
-      const key = cb.dataset.key;
-      const p = prices[key];
-      if (!p) return;
-      const units = Math.ceil(ha / p.coverageHa);
-      const rowTotal = Math.round(units * p.price);
-      const priceEl = cb.closest(".cost-item")?.querySelector(".cost-item-price");
-      const detailEl = cb.closest(".cost-item")?.querySelector(".cost-item-detail");
-      if (priceEl) priceEl.textContent = cb.checked ? `${rowTotal} ₾` : "—";
-      if (detailEl && cb.checked) detailEl.textContent = `${units} ${p.unit} × ${p.price} ₾`;
-      if (cb.checked) total += rowTotal;
-    });
-    totalEl.textContent = `${total} ₾`;
-  };
-
-  container.innerHTML = Object.entries(groups).map(([cat, items]) => `
-    <div class="cost-group">
-      <p class="cost-group-title">${cat}</p>
-      ${items.map(p => `
-        <label class="cost-item">
-          <input type="checkbox" data-key="${p.key}" ${p.checked ? "checked" : ""} />
-          <div class="cost-item-name">${p.name}</div>
-          <div>
-            <div class="cost-item-detail">${p.coverageHa < 0.05 ? `ფასი/კგ: ${p.price} ₾` : `${p.unit} → ${p.coverageHa} ჰა`}</div>
-            <div class="cost-item-price">—</div>
-          </div>
-        </label>`).join("")}
-    </div>`).join("");
-
-  container.querySelectorAll("input[type=checkbox]").forEach(cb =>
-    cb.addEventListener("change", recalc));
-  sizeInput?.addEventListener("input", recalc);
-  recalc();
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d;
 }
 
-function renderCropSchedule(crop, dayCount) {
-  const container = document.getElementById("crop-schedule");
-  if (!container) return;
+function formatDateKa(date) {
+  return new Intl.DateTimeFormat("ka-GE", { day: "numeric", month: "long" }).format(date);
+}
 
-  const rows = CROP_SCHEDULES[crop];
-  if (!rows?.length) {
-    container.innerHTML = `<p class="sched-empty">ამ კულტურისთვის სქემა მალე დაემატება.</p>`;
-    return;
+function daysUntil(date) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - now) / 86400000);
+}
+
+function buildWateringVerdict(plant, catalogEntry) {
+  const interval = getWateringIntervalDays(catalogEntry, plant.window_direction);
+  if (!plant.last_watered) {
+    return { text: "ჯერ არ მოგირწყავთ — მორწყეთ დღეს.", dueToday: true };
+  }
+  const nextDate = addDays(plant.last_watered, interval);
+  const diff = daysUntil(nextDate);
+  if (diff <= 0) {
+    return { text: `მორწყვის დროა — ბოლო მორწყვიდან ${interval}+ დღეა.`, dueToday: true };
+  }
+  return { text: `შემდეგი მორწყვა: ${formatDateKa(nextDate)} (${diff} დღეში)`, dueToday: false };
+}
+
+function buildLightVerdict(plant, catalogEntry) {
+  const need = catalogEntry.light;
+  const dir = plant.window_direction;
+
+  if (!dir) {
+    return `საჭიროა: ${need}. მიუთითეთ ფანჯრის მიმართულება ზუსტი შეფასებისთვის.`;
   }
 
-  const activeIdx = rows.findIndex(r => dayCount >= r.days[0] && dayCount < r.days[1]);
+  const windowLabel = WINDOW_LABELS_KA[dir] || dir;
+  const strongDirect = dir === "south";
+  const brightIndirect = dir === "east" || dir === "west";
+  const low = dir === "north";
+  const none = dir === "none";
 
-  container.innerHTML = rows.map((r, i) => {
-    const active = i === activeIdx;
-    const noInsect = r.insecticide === "საჭირო არ არის" || r.insecticide === "—";
-    const noNotes  = !r.notes || r.notes === "—";
-    return `
-    <div class="sched-card ${active ? "sched-card--active" : ""}">
-      <div class="sched-card-header">
-        <div class="sched-header-left">
-          <span class="sched-stage-name">${r.stage}</span>
-          <span class="sched-days">${r.days[0]}–${r.days[1]} დღე</span>
-        </div>
-        ${active ? `<span class="sched-now-badge">▶ ახლა</span>` : ""}
-      </div>
-      <div class="sched-card-body">
-        <div class="sched-row">
-          <span class="sched-icon">🍄</span>
-          <div><p class="sched-lbl">ფუნგიციდი</p><p class="sched-val">${r.fungicide}</p></div>
-        </div>
-        ${!noInsect ? `
-        <div class="sched-row">
-          <span class="sched-icon">🐛</span>
-          <div><p class="sched-lbl">ინსექტიციდი</p><p class="sched-val">${r.insecticide}</p></div>
-        </div>` : ""}
-        <div class="sched-row">
-          <span class="sched-icon">🌱</span>
-          <div><p class="sched-lbl">სასუქი</p><p class="sched-val">${r.fertilizer}</p></div>
-        </div>
-        ${!noNotes ? `
-        <div class="sched-row sched-row--note">
-          <span class="sched-icon">💡</span>
-          <div><p class="sched-lbl">შენიშვნა</p><p class="sched-val">${r.notes}</p></div>
-        </div>` : ""}
-      </div>
-    </div>`;
-  }).join("");
+  let match;
+  if (need === "მკვეთრი პირდაპირი") match = strongDirect;
+  else if (need === "მკვეთრი არაპირდაპირი") match = strongDirect || brightIndirect;
+  else if (need === "ნახევარჩრდილი") match = brightIndirect || low;
+  else match = low || none; // ჩრდილი
+
+  if (none) match = need === "ჩრდილი" || need === "ნახევარჩრდილი";
+
+  return match
+    ? `✅ შესაფერისია — საჭიროა ${need}, თქვენთან: ${windowLabel}.`
+    : `⚠️ შეუსაბამობა — საჭიროა ${need}, თქვენთან: ${windowLabel}.`;
 }
 
-// ── Frost sensitivity thresholds per crop (°C) ──────────────────────────────
-const FROST_THRESHOLDS = {
-  tomato: 2, pepper: 2, cucumber: 2, watermelon: 2, bean: 2, rice: 2,
-  maize: 0, sunflower: 0, vine: 0, strawberry: -1, peach: -1,
-  potato: -1, cabbage: -2, onion: -2, garlic: -2,
-  carrot: -3, apple: -3, nuts: -3, wheat: -5,
-};
-
-function checkForecastAlerts(crop, forecast) {
-  if (!forecast?.length) return [];
-  const alerts = [];
-  const frostLimit = FROST_THRESHOLDS[crop] ?? 0;
-  const dayLabels = ["კვი", "ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
-
-  forecast.slice(0, 7).forEach((day, i) => {
-    const label = i === 0 ? "დღეს" : i === 1 ? "ხვალ" : dayLabels[new Date(day.date).getDay()];
-
-    if (day.minC <= frostLimit + 2) {
-      const critical = day.minC <= frostLimit;
-      alerts.push({
-        type: "frost", critical, dayIndex: i, label,
-        text: `❄️ ${label}: ყინვის ${critical ? "საფრთხე" : "რისკი"}! მინ. ${Math.round(day.minC)}°C`,
-      });
-    }
-    if (day.code === 96 || day.code === 99) {
-      alerts.push({
-        type: "hail", critical: true, dayIndex: i, label,
-        text: `⛈️ ${label}: სეტყვა მოსალოდნელია! ნაკვეთი შეამოწმეთ.`,
-      });
-    }
-    if (day.maxC >= 35) {
-      alerts.push({
-        type: "heat", critical: day.maxC >= 40, dayIndex: i, label,
-        text: `🌡️ ${label}: სითბური სტრესი! მაქს. ${Math.round(day.maxC)}°C — მორწყვა გაზარდეთ.`,
-      });
-    }
-    if (day.rainMm >= 30) {
-      alerts.push({
-        type: "rain", critical: false, dayIndex: i, label,
-        text: `🌧️ ${label}: ძლიერი წვიმა (${Math.round(day.rainMm)}მმ) — სოკოვანი დაავადების რისკი გაიზრდება.`,
-      });
-    }
-  });
-
-  return alerts;
-}
-
-function renderForecast(forecast, crop) {
-  const container = document.getElementById("forecast-strip");
-  if (!container || !forecast?.length) return;
-
-  const days = ["კვი", "ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
-  const alerts = checkForecastAlerts(crop, forecast);
-  const alertsByDay = {};
-  alerts.forEach(a => { alertsByDay[a.dayIndex] = a; });
-
-  container.innerHTML = forecast.slice(0, 7).map((day, i) => {
-    const date = new Date(day.date);
-    const label = i === 0 ? "დღეს" : days[date.getDay()];
-    const alert = alertsByDay[i];
-    const alertClass = alert
-      ? alert.critical ? "forecast-day--danger" : "forecast-day--warn"
-      : "";
-    const alertIcon = alert
-      ? `<span class="forecast-alert-icon">${alert.type === "frost" ? "❄️" : alert.type === "hail" ? "⛈️" : alert.type === "heat" ? "🌡️" : "🌧️"}</span>`
-      : "";
-    return `
-      <div class="forecast-day ${alertClass}" title="${alert ? alert.text : ""}">
-        <span class="forecast-label">${label}</span>
-        <span class="forecast-icon">${alertIcon || weatherCodeToEmoji(day.code)}</span>
-        <span class="forecast-temp">${Math.round(day.maxC)}°</span>
-        <span class="forecast-min">${Math.round(day.minC)}°</span>
-        ${day.rainMm > 0 ? `<span class="forecast-rain">💧${Math.round(day.rainMm)}მმ</span>` : '<span class="forecast-rain"></span>'}
-      </div>`;
-  }).join("");
-}
-
-async function fetchAccumulatedGdd(location, plantingDate, baseTemp) {
-  const coords = await fetchCoordinates(location);
-  const endDate = new Date().toISOString().slice(0, 10);
-  const archiveUrl =
-    `https://archive-api.open-meteo.com/v1/archive?latitude=${coords.latitude}` +
-    `&longitude=${coords.longitude}` +
-    `&start_date=${plantingDate}&end_date=${endDate}` +
-    `&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
-
-  const res = await fetch(archiveUrl);
-  if (!res.ok) throw new Error("Archive weather request failed");
-  const data = await res.json();
-
-  const tMax = data?.daily?.temperature_2m_max || [];
-  const tMin = data?.daily?.temperature_2m_min || [];
-  if (!tMax.length || !tMin.length || tMax.length !== tMin.length) {
-    throw new Error("Invalid archive weather data");
+function buildFertilizeVerdict(plant, catalogEntry) {
+  if (!isSummerSeason()) {
+    return { text: "საჭირო არ არის — მოსვენების პერიოდია (ნოემბერი–თებერვალი).", dueToday: false };
   }
-
-  let totalGdd = 0;
-  for (let i = 0; i < tMax.length; i += 1) {
-    const mean = (Number(tMax[i]) + Number(tMin[i])) / 2;
-    totalGdd += Math.max(0, mean - baseTemp);
+  if (!plant.last_fertilized) {
+    return { text: "ჯერ არ გქონიათ სასუქის შეტანა — შეგიძლიათ დღეს.", dueToday: true };
   }
-  return Math.round(totalGdd);
+  const nextDate = addDays(plant.last_fertilized, catalogEntry.fertilize_interval_days);
+  const diff = daysUntil(nextDate);
+  if (diff <= 0) return { text: "სასუქის შეტანის დროა.", dueToday: true };
+  return { text: `შემდეგი კვება: ${formatDateKa(nextDate)} (${diff} დღეში)`, dueToday: false };
 }
 
-function getStageByGdd(crop, gdd) {
-  const config = gddByCrop[crop] || gddByCrop.maize;
-  return config.stages.find((s) => gdd <= s.maxGdd)?.stage || "უცნობია";
+function buildRepotVerdict(plant, catalogEntry) {
+  if (!plant.last_repotted) {
+    return { text: `დაგეგმეთ პირველი გადარგვა ~${catalogEntry.repot_interval_months} თვეში.`, dueToday: false };
+  }
+  const nextDate = new Date(plant.last_repotted);
+  nextDate.setMonth(nextDate.getMonth() + catalogEntry.repot_interval_months);
+  const diff = daysUntil(nextDate);
+  if (diff <= 0) return { text: "გადარგვის დროა.", dueToday: true };
+  const months = Math.round(diff / 30);
+  return { text: `შემდეგი გადარგვა: ${formatDateKa(nextDate)} (~${months} თვეში)`, dueToday: false };
 }
 
-function buildAdvice(crop, dayCount, weather, farmSize, soilType, irrigationType) {
-  const stage = getStage(crop, dayCount);
-
-  // Map Georgian soil types to watering categories
-  // "heavy" = slow drainage (clay-like): bicsobi, ruxikavisf, tsiteli, kiteli
-  // "light" = fast drainage (sandy/porous): aluviari (variable — treat as medium)
-  // "medium" = everything else
-  const soilWaterCat =
-    ["bicsobi", "ruxikavisf"].includes(soilType) ? "heavy" :
-    ["kiteli", "tsiteli"].includes(soilType) ? "heavy" :
-    soilType === "aluviari" ? "medium" : "medium";
-
-  const rainThreshold = soilWaterCat === "heavy" ? 12 : 8;
-  const heatThreshold = 30;
-
-  const irrigSuffix = irrigationType === "drip"
-    ? " წვეთოვანი სისტემა — ფესვთა ზონაში ნელი, ზომიერი კვება."
-    : irrigationType === "furrow"
-    ? " კვლებში მორწყვა — ღარები ბოლომდე გაავსეთ, ნიადაგი კარგად გაჯერდეს."
-    : irrigationType === "flood"
-    ? " დატბორვით — ნიადაგი თანაბრად დასველდეს; ბრინჯისთვის მუდმივი ფენა შეინარჩუნეთ."
-    : irrigationType === "sprinkler"
-    ? " დაწვიმებით — დილის 7-10 საათს შორის ჩართეთ; ფოთელი დღის სიცხეში არ დასველდეს."
-    : "";
-
-  const soilNames = {
-    omrali: "ყომრალი", kavisperi: "ყავისფერი", shavimiwa: "შავმიწა",
-    aluviari: "ალუვიური", kiteli: "ყვითელმიწა ეწერი", tsiteli: "წითელმიწა",
-    ruxikavisf: "რუხი ყავისფერი", bicsobi: "ბიცი/ბიცობი", mtamdelo: "მთა-მდელოს კორდიანი",
-  };
-  const soilName = soilNames[soilType] || "";
-  const soilPrefix = soilName ? `${soilName} ნიადაგი — ` : "";
-
-  let watering;
-  if (weather.rainMm >= rainThreshold) {
-    watering = soilWaterCat === "heavy"
-      ? `${soilPrefix}მძიმე ნიადაგი კარგად გაჯერდა — მორწყვა დღეს საჭირო არ არის; შეამოწმეთ დატბორვა.`
-      : `დღეს მორწყვა შეამცირეთ წვიმის გამო; მოერიდეთ გადაჭარბებულ დატბორვას.`;
-  } else if (weather.tempC >= heatThreshold || weather.rainMm === 0) {
-    watering = `${soilPrefix}მორწყვის სიხშირე გაზარდეთ; ნიადაგის ტენიანობა დილით და საღამოს შეამოწმეთ.`;
-    watering += irrigSuffix;
-  } else {
-    watering = soilWaterCat === "heavy"
-      ? `${soilPrefix}2-3 დღეში ერთხელ მორწყვა საკმარისია; გადარწყვა მოერიდეთ.`
-      : `${soilPrefix}შეინარჩუნეთ ნიადაგის საშუალო ტენიანობა და ყოველდღე შეამოწმეთ.`;
-    watering += irrigSuffix;
+// ── user_plants: delete ───────────────────────────────────────────────────
+async function deleteUserPlant(plantId) {
+  if (!currentUser) {
+    writeLocalPlants(readLocalPlants().filter((p) => p.id !== plantId));
+    return true;
   }
+  if (!supabaseClient) return false;
 
-  let risk = "დაბალი";
-  if (weather.humidity >= 85) risk = "მაღალი";
-  else if (weather.humidity >= 75) risk = "საშუალო";
+  const { error, status } = await supabaseClient.from("user_plants").delete().eq("id", plantId);
+  if (error) {
+    logSupabaseError("user_plants", "delete", error);
+    if (isInfraError(status)) setLocalMode("ქლაუდი მიუწვდომელია");
+    return false;
+  }
+  return true;
+}
 
-  // Build spraying advice: ONE action based on weather + current stage
-  const schedRows = (CROP_SCHEDULES[crop] || []).filter(r => r.days);
-  const activeStage = schedRows.find(r => dayCount >= r.days[0] && dayCount < r.days[1])
-                   || schedRows[schedRows.length - 1];
+// ── Plant dashboard ──────────────────────────────────────────────────────
+let currentPlants = [];
+let activePlantId = null;
 
-  let spraying;
-  if (activeStage) {
-    const hasFung = activeStage.fungicide && activeStage.fungicide !== "საჭირო არ არის";
-    const hasIns  = activeStage.insecticide && activeStage.insecticide !== "საჭირო არ არის";
+function getActivePlant() {
+  return currentPlants.find((p) => p.id === activePlantId) || null;
+}
 
-    if (risk === "მაღალი" && hasFung) {
-      // High humidity → fungicide is urgent TODAY
-      spraying = `🍄 დღეს შეასხით ფუნგიციდი: ${activeStage.fungicide}. მაღალი ტენიანობა — სოკოს რისკი მაღალია.`;
-    } else if (risk === "საშუალო" && hasFung) {
-      // Medium humidity → fungicide within 1-2 days
-      spraying = `🍄 1-2 დღეში ფუნგიციდი: ${activeStage.fungicide}. სოკოს ადრეული ნიშნებს გააკვირდით.`;
-    } else if ((weather.tempC >= 25 || weather.humidity < 60) && hasIns) {
-      // Warm/dry conditions → pest risk higher
-      spraying = `🐛 შეამოწმეთ მავნებლები — საჭიროების შემთხვევაში: ${activeStage.insecticide}.`;
-    } else if (activeStage.notes) {
-      spraying = `📌 ${activeStage.notes}`;
-    } else if (hasFung) {
-      spraying = `🍄 სტადიის ფუნგიციდი: ${activeStage.fungicide}`;
+function renderPlantDashboard(plant) {
+  const catalogEntry = PLANT_CATALOG[plant.catalog_id];
+  if (!catalogEntry) return;
+
+  outCrop.textContent = plant.nickname || catalogEntry.georgian_name;
+  outLocation.textContent = plant.location || "-";
+
+  const outSpecies = document.getElementById("out-species");
+  if (outSpecies) outSpecies.textContent = `${catalogEntry.georgian_name} (${catalogEntry.latin_name})`;
+
+  const outWindow = document.getElementById("out-window");
+  if (outWindow) outWindow.textContent = WINDOW_LABELS_KA[plant.window_direction] || "მითითებული არ არის";
+
+  const outPotSize = document.getElementById("out-pot-size");
+  if (outPotSize) outPotSize.textContent = plant.pot_size_cm ? `${plant.pot_size_cm} სმ` : "-";
+
+  const toxicBlock = document.getElementById("toxic-block");
+  const outToxic = document.getElementById("out-toxic");
+  if (toxicBlock && outToxic) {
+    if (catalogEntry.toxic_to_pets) {
+      outToxic.textContent = "⚠️ ტოქსიკურია ცხოველებისთვის";
+      toxicBlock.style.display = "";
     } else {
-      spraying = "ახლავე შეწამვლა საჭირო არ არის. განაგრძეთ ნაკვეთის მონიტორინგი.";
-    }
-  } else {
-    if (risk === "მაღალი") spraying = "მაღალი ტენიანობის რისკია: სიმპტომებისას გამოიყენეთ პროფილაქტიკური ფუნგიციდი.";
-    else if (risk === "საშუალო") spraying = "აკონტროლეთ სოკოს ადრეული ნიშნები; შეწამვლამდე უზრუნველყავით ჰაერის ცირკულაცია.";
-    else spraying = "ახლავე შეწამვლა საჭირო არ არის. განაგრძეთ ნაკვეთის მონიტორინგი.";
-  }
-
-  const alert =
-    risk === "მაღალი"
-      ? "გაფრთხილება: დღეს დაავადების რისკი მაღალია. პირველ რიგში შეამოწმეთ ხშირი ზონები."
-      : weather.tempC >= 30
-      ? "გაფრთხილება: შუადღით მოსალოდნელია სითბური სტრესი. პიკის დროს მორწყვას მოერიდეთ."
-      : "გაფრთხილება: პირობები სტაბილურია. გააგრძელეთ რეგულარული მონიტორინგი.";
-
-  const fertilizerByCrop = {
-    maize: {
-      "გაღივება": "NPK 10-20-20 მცირე დოზით, რიგებს შორის.",
-      "ვეგეტაცია": "აზოტოვანი სასუქი (ურეა/ამონიუმის ნიტრატი) ნორმის მიხედვით.",
-      "ყვავილობა": "კალიუმის დამატება მცენარის გამძლეობისთვის.",
-      "მარცვლის შევსება": "ფოსფორ-კალიუმიანი კვება საჭიროების მიხედვით.",
-      "სიმწიფე": "ახალი სასუქი აღარ დაამატოთ."
-    },
-    wheat: {
-      "გაღივება": "სტარტერული NPK მცირე დოზით.",
-      "კოკრიანობა": "აზოტოვანი გამოკვება (ტოპდრესინგი).",
-      "ღეროს ზრდა": "აზოტის მეორე დოზა ნორმის ფარგლებში.",
-      "თავთავის გამოსვლა": "კალიუმის მხარდაჭერა, ზედმეტი აზოტის გარეშე.",
-      "მომწიფება": "სასუქის შეწყვეტა."
-    },
-    tomato: {
-      "ჩითილი": "ფესვის სტიმულაციისთვის ფოსფორიანი სტარტერი.",
-      "ვეგეტაცია": "ბალანსირებული NPK + მიკროელემენტები.",
-      "ყვავილობა": "ბორი/კალიუმი ყვავილობის მხარდაჭერისთვის.",
-      "ნაყოფის შეკვრა": "კალიუმით მდიდარი კვება ნაყოფის ზრდისთვის.",
-      "მოსავლის აღება": "მსუბუქი კვება საჭიროებისამებრ."
-    },
-    potato: {
-      "აღმონაცენი": "ფოსფორიანი სტარტერული კვება.",
-      "ვეგეტაცია": "ბალანსირებული NPK ზომიერი აზოტით.",
-      "ტუბერის წარმოქმნა": "კალიუმის გაზრდა ტუბერის განვითარებისთვის.",
-      "ტუბერის ზრდა": "კალიუმი + კალციუმი ხარისხისთვის.",
-      "სიმწიფე": "კვების შეზღუდვა."
-    },
-    rice: {
-      "ჩითილი": "სტარტერული აზოტ-ფოსფორი.",
-      "კოკრიანობა": "აზოტის ძირითადი დოზა.",
-      "თავთავის ფორმირება": "კალიუმის მხარდაჭერა.",
-      "ყვავილობა": "საშუალო კვება სტრესის თავიდან ასაცილებლად.",
-      "მომწიფება": "ახალი სასუქი არ არის საჭირო."
-    },
-    vine: {
-      "კვირტის გაშლა": "აზოტის მცირე დოზა ზრდის დასაწყისში.",
-      "ვეგეტაცია": "ბალანსირებული NPK + მაგნიუმი.",
-      "ყვავილობა": "ბორი/თუთია ყვავილობის გასაძლიერებლად.",
-      "მტევნის ზრდა": "კალიუმით მდიდარი კვება შაქრიანობისთვის.",
-      "მომწიფება": "აზოტი შეამცირეთ, კალიუმი შეინარჩუნეთ ზომიერად."
-    },
-    nuts: {
-      "კვირტის გაშლა": "აზოტის მსუბუქი სტარტერი.",
-      "ვეგეტაცია": "NPK + კალციუმი ფესვისა და ყლორტის გასაძლიერებლად.",
-      "ყვავილობა/ნაყოფის შეკვრა": "ბორი და კალიუმი ნაყოფის შეკვრისთვის.",
-      "ნაყოფის შევსება": "კალიუმი + მიკროელემენტები ნაყოფის ხარისხისთვის.",
-      "მომწიფება": "კვება შეზღუდეთ, ყურადღება მიაქციეთ ტენიანობას."
-    },
-    sunflower: {
-      "გაღივება": "სტარტერული NPK 10-20-20 მცირე დოზით.",
-      "ვეგეტაცია": "აზოტოვანი კვება (ამონიუმის ნიტრატი) ზრდის დასაჩქარებლად.",
-      "კვირტის წარმოქმნა": "ბორი + კალიუმი ყვავილობის მხარდაჭერისთვის.",
-      "ყვავილობა/სიმწიფე": "სასუქის შეწყვეტა, ტენიანობის კონტროლი."
-    },
-    onion: {
-      "გაღივება": "ფოსფორიანი სტარტერი ფესვის განვითარებისთვის.",
-      "ვეგეტაცია": "ბალანსირებული NPK + გოგირდი ბოლქვის ხარისხისთვის.",
-      "ბოლქვის წარმოქმნა": "კალიუმის გაზრდა, აზოტის შემცირება.",
-      "სიმწიფე": "სასუქი შეწყვიტეთ — ბოლქვის გამხმობა."
-    },
-    garlic: {
-      "გაღივება": "ფოსფორ-კალიუმიანი სტარტერი.",
-      "ვეგეტაცია": "აზოტოვანი კვება ფოთლოვანი მასის ზრდისთვის.",
-      "კბილების წარმოქმნა": "კალიუმი + გოგირდი კბილების შევსებისთვის.",
-      "სიმწიფე": "კვება შეწყვიტეთ."
-    },
-    pepper: {
-      "ჩითილი": "ფოსფორიანი სტარტერი + კალციუმი.",
-      "ვეგეტაცია": "ბალანსირებული NPK + მაგნიუმი ფოთლოვანი კვებით.",
-      "ყვავილობა": "ბორი + კალიუმი ყვავილობის შეკვრისთვის.",
-      "ნაყოფის შეკვრა": "კალიუმით მდიდარი კვება, კალციუმი სიდამპლის წინააღმდეგ.",
-      "მოსავლის აღება": "მსუბუქი კვება, ძირითადად კალიუმი."
-    },
-    cucumber: {
-      "გაღივება": "სტარტერული NPK მცირე დოზით.",
-      "ვეგეტაცია": "აზოტ-კალიუმიანი კვება სწრაფი ზრდისთვის.",
-      "ყვავილობა": "კალიუმი + ბორი ნაყოფის შეკვრისთვის.",
-      "მოსავლის აღება": "კალიუმი + მიკროელემენტები ნაყოფის ხარისხისთვის."
-    },
-    watermelon: {
-      "გაღივება": "ფოსფორიანი სტარტერი.",
-      "ვეგეტაცია": "ბალანსირებული NPK + მაგნიუმი.",
-      "ყვავილობა": "კალიუმი + ბორი ნაყოფის შეკვრისთვის.",
-      "ნაყოფის სიმწიფე": "კალიუმი შაქრიანობისთვის, აზოტი შეამცირეთ."
-    },
-    cabbage: {
-      "ჩითილი": "ფოსფორიანი სტარტერი + კალციუმი.",
-      "ვეგეტაცია": "აზოტოვანი კვება (ამონიუმის ნიტრატი) თავის ზრდისთვის.",
-      "თავის წარმოქმნა": "კალიუმი + კალციუმი სიმკვრივისთვის.",
-      "სიმწიფე": "კვება შეწყვიტეთ."
-    },
-    carrot: {
-      "გაღივება": "ფოსფორიანი სტარტერი, მცირე აზოტი.",
-      "ვეგეტაცია": "ბალანსირებული NPK + ბორი.",
-      "ძირის გასქელება": "კალიუმი + ფოსფორი ძირის ხარისხისთვის.",
-      "სიმწიფე": "კვება შეწყვიტეთ."
-    },
-    strawberry: {
-      "ადაპტაცია": "ფოსფორიანი სტარტერი ფესვის განვითარებისთვის.",
-      "ყვავილობა": "კალიუმი + ბორი ყვავილობის მხარდაჭერისთვის.",
-      "ნაყოფის სიმწიფე": "კალიუმით მდიდარი კვება გემოსთვის, აზოტი მინიმალური."
-    },
-    apple: {
-      "კვირტის გაშლა": "აზოტის მცირე დოზა ზრდის დასაწყისში.",
-      "ყვავილობა": "ბორი + კალციუმი ნაყოფის შეკვრისთვის.",
-      "ნაყოფის ზრდა": "კალიუმი + კალციუმი ნაყოფის ხარისხისთვის.",
-      "მომწიფება": "კვება შეწყვიტეთ."
-    },
-    peach: {
-      "კვირტის გაშლა": "აზოტის მცირე დოზა.",
-      "ყვავილობა": "ბორი + კალციუმი.",
-      "ნაყოფის ზრდა": "კალიუმი + მიკროელემენტები ნაყოფის ხარისხისთვის.",
-      "ნაყოფის სიმწიფე": "კვება შეწყვიტეთ."
-    },
-    bean: {
-      "გაღივება": "ფოსფორიანი სტარტერი, აზოტი მინიმალური (ლობიო თვითონ ამდიდრებს).",
-      "ვეგეტაცია": "კალიუმი + ფოსფორი, ნაკლები აზოტი.",
-      "ყვავილობა": "ბორი + კალიუმი პარკის შეკვრისთვის.",
-      "მოსავლის აღება": "კვება შეწყვიტეთ."
-    }
-  };
-
-  let fertilizer =
-    fertilizerByCrop[crop]?.[stage] || "გამოიყენეთ ბალანსირებული NPK მცირე დოზით და ნიადაგის ანალიზის მიხედვით.";
-
-  if (farmSize && farmSize > 0) {
-    const dosagePerHa = { maize: 150, wheat: 120, tomato: 180, potato: 160, rice: 140,
-      vine: 80, nuts: 70, sunflower: 130, onion: 150, garlic: 120, pepper: 160,
-      cucumber: 140, watermelon: 120, cabbage: 160, carrot: 130, strawberry: 100,
-      apple: 90, peach: 90, bean: 80 };
-    const kgPerHa = dosagePerHa[crop] || 120;
-    const total = Math.round(kgPerHa * farmSize);
-    fertilizer += ` (სულ ${farmSize} ჰა → ~${total} კგ)`;
-  }
-
-  let pesticide = "დღეს ქიმიური ჩარევა არ არის საჭირო, გააგრძელეთ მონიტორინგი.";
-  if (risk === "მაღალი") {
-    pesticide =
-      "რეკომენდებულია კონტაქტური ან სისტემური ფუნგიციდის პროფილაქტიკური გამოყენება ეტიკეტის ინსტრუქციის დაცვით.";
-  } else if (risk === "საშუალო") {
-    pesticide = "დაიწყეთ ბიოფუნგიციდით/მსუბუქი პროფილაქტიკით და დააკვირდით სიმპტომებს 24-48 საათში.";
-  }
-
-  if (weather.tempC >= 32) {
-    fertilizer += " მაღალი ტემპერატურის დროს ფოთლოვანი კვება საღამოს საათებში დაგეგმეთ.";
-  }
-
-  return { stage, watering, risk, spraying, fertilizer, pesticide, alert };
-}
-
-async function renderDashboard(data) {
-  let weather;
-  let gdd;
-  let stageText;
-
-  const submitBtn = setupForm.querySelector("button[type='submit']");
-  const locationError = document.getElementById("location-error");
-
-  if (submitBtn) {
-    submitBtn.textContent = "იტვირთება...";
-    submitBtn.disabled = true;
-  }
-  if (locationError) locationError.classList.add("hidden");
-
-  setSyncBadge();
-
-  try {
-    weather = await fetchLiveWeather(data.location);
-  } catch (err) {
-    if (submitBtn) {
-      submitBtn.textContent = "დაწყება →";
-      submitBtn.disabled = false;
-    }
-    if (err.message === "მდებარეობა ვერ მოიძებნა" && locationError) {
-      locationError.textContent = "⚠ მდებარეობა ვერ მოიძებნა. სცადეთ სხვა სახელი (მაგ.: Telavi).";
-      locationError.classList.remove("hidden");
-      return;
-    }
-    weather = { ...getWeather(data.location), source: "სავარაუდო ამინდი" };
-  }
-
-  const dayCount = daysSincePlanting(data.plantingDate);
-  try {
-    const baseTemp = (gddByCrop[data.crop] || gddByCrop.maize).baseTemp;
-    gdd = await fetchAccumulatedGdd(data.location, data.plantingDate, baseTemp);
-    stageText = `${getStageByGdd(data.crop, gdd)} (GDD ${gdd})`;
-  } catch (_) {
-    stageText = `${getStage(data.crop, dayCount)} (დათესვიდან ${dayCount} დღე)`;
-  }
-
-  const advice = buildAdvice(data.crop, dayCount, weather, data.farmSize || 0, data.soilType || "", data.irrigationType || "");
-
-  const harvest = estimateHarvestDate(data.crop, data.plantingDate);
-  const harvestEl = document.getElementById("out-harvest");
-  if (harvestEl) {
-    if (harvest.daysLeft > 0) {
-      harvestEl.textContent = `${harvest.earliest} — ${harvest.latest} (კიდევ ~${harvest.daysLeft} დღე)`;
-    } else {
-      harvestEl.textContent = `${harvest.earliest} — ${harvest.latest} (მოსავლის აღების პერიოდი)`;
+      toxicBlock.style.display = "none";
     }
   }
 
-  renderForecast(weather.forecast, data.crop);
-  renderCropSchedule(data.crop, dayCount);
-  void renderCostCalculator(data.crop, dayCount, data.farmSize || 1);
+  const outDifficulty = document.getElementById("out-difficulty");
+  if (outDifficulty) outDifficulty.textContent = catalogEntry.difficulty;
 
-  // ── Forecast danger alerts ──
-  const forecastAlerts = checkForecastAlerts(data.crop, weather.forecast);
-  const alertBar = document.querySelector(".alert-bar");
-  if (forecastAlerts.length > 0) {
-    const critical = forecastAlerts.filter(a => a.critical);
-    const toShow = critical.length > 0 ? critical : forecastAlerts;
-    const alertHTML = toShow.slice(0, 3).map(a =>
-      `<p class="forecast-alert-text ${a.critical ? "forecast-alert--critical" : "forecast-alert--warn"}">${a.text}</p>`
-    ).join("");
-    alertBar.innerHTML = `<p id="out-alert">${advice.alert}</p>${alertHTML}`;
-  } else {
-    alertBar.innerHTML = `<p id="out-alert">${advice.alert}</p>`;
-  }
+  outWatering.textContent = buildWateringVerdict(plant, catalogEntry).text;
 
+  const outLight = document.getElementById("out-light");
+  if (outLight) outLight.textContent = buildLightVerdict(plant, catalogEntry);
 
-  const farmSizeBlock = document.getElementById("farm-size-block");
-  const outFarmSize = document.getElementById("out-farm-size");
-  if (data.farmSize && data.farmSize > 0) {
-    outFarmSize.textContent = `${data.farmSize} ჰა`;
-    farmSizeBlock.style.display = "";
-  } else {
-    farmSizeBlock.style.display = "none";
-  }
+  const outFertilizerEl = document.getElementById("out-fertilizer");
+  if (outFertilizerEl) outFertilizerEl.textContent = buildFertilizeVerdict(plant, catalogEntry).text;
 
-  const soilBlock = document.getElementById("soil-block");
-  const outSoil = document.getElementById("out-soil");
-  const soilLabels = {
-    omrali: "🟤 ყომრალი", kavisperi: "🟫 ყავისფერი", shavimiwa: "⬛ შავმიწა",
-    aluviari: "🌊 ალუვიური", kiteli: "🟡 ყვითელმიწა ეწერი", tsiteli: "🔴 წითელმიწა",
-    ruxikavisf: "🩶 რუხი ყავისფერი", bicsobi: "🟣 ბიცი/ბიცობი", mtamdelo: "🏔️ მთა-მდელოს კორდიანი",
-  };
-  const irrigLabels = { drip: "💧 წვეთოვანი", furrow: "🌿 კვლებში", flood: "🌊 დატბორვით", sprinkler: "🚿 დაწვიმებითი", rain: "🌧 წვიმა" };
-  const soilStr = soilLabels[data.soilType] || "";
-  const irrigStr = irrigLabels[data.irrigationType] || "";
-  if (soilStr || irrigStr) {
-    outSoil.textContent = [soilStr, irrigStr].filter(Boolean).join(" / ");
-    soilBlock.style.display = "";
-  } else {
-    soilBlock.style.display = "none";
-  }
+  const outRepotEl = document.getElementById("out-repot");
+  if (outRepotEl) outRepotEl.textContent = buildRepotVerdict(plant, catalogEntry).text;
 
-  outCrop.textContent = cropLabelsKa[data.crop] || data.crop;
-  outLocation.textContent = data.location;
-  outWeather.textContent =
-    `${weather.condition} (${weather.tempC}°C, ტენიანობა ${weather.humidity}%, ნალექი ${weather.rainMm} მმ) - ${weather.source}`;
-  outStage.textContent = stageText;
-  outWatering.textContent = advice.watering;
-  outRisk.textContent = advice.risk;
-  outRisk.dataset.level = advice.risk;
-  outSpraying.textContent = advice.spraying;
-  outFertilizer.textContent = advice.fertilizer;
-  outPesticide.textContent = advice.pesticide;
-  // outAlert is set inside the forecast alerts block below
-
-  if (submitBtn) {
-    submitBtn.textContent = "დაწყება →";
-    submitBtn.disabled = false;
+  const problemsContainer = document.getElementById("plant-problems");
+  if (problemsContainer) {
+    problemsContainer.innerHTML = catalogEntry.common_problems.map((p) => `
+      <div class="sched-card">
+        <div class="sched-card-body">
+          <div class="sched-row"><span class="sched-icon">🔍</span><div><p class="sched-lbl">სიმპტომი</p><p class="sched-val">${p.symptom}</p></div></div>
+          <div class="sched-row"><span class="sched-icon">❓</span><div><p class="sched-lbl">მიზეზი</p><p class="sched-val">${p.cause}</p></div></div>
+          <div class="sched-row"><span class="sched-icon">✅</span><div><p class="sched-lbl">გამოსავალი</p><p class="sched-val">${p.fix}</p></div></div>
+        </div>
+      </div>`).join("");
   }
 
   setupPanel.classList.add("hidden");
   dashboardPanel.classList.remove("hidden");
   chatToggle.classList.remove("hidden");
-  startAutoRefresh();
-  void initNotifications(advice);
-  scheduleMorningEmail();
-  triggerWeatherAlertNotification(checkForecastAlerts(data.crop, weather.forecast));
 }
 
-document.getElementById("whatsapp-btn").addEventListener("click", () => {
-  const lines = [
-    `🌱 SmartFarm — ${new Intl.DateTimeFormat("ka-GE", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}`,
-    `კულტურა: ${document.getElementById("out-crop").textContent} — ${document.getElementById("out-location").textContent}`,
-    `ამინდი: ${document.getElementById("out-weather").textContent}`,
-    `🌿 ზრდის ფაზა: ${document.getElementById("out-stage").textContent}`,
-    `🌾 მოსავალი: ${document.getElementById("out-harvest").textContent}`,
-    `💧 მორწყვა: ${document.getElementById("out-watering").textContent}`,
-    `🦠 დაავადების რისკი: ${document.getElementById("out-risk").textContent}`,
-    `⚠ ${document.getElementById("out-alert").textContent}`,
-  ];
-  window.open(`https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
-});
+// ── Plant switcher UI ────────────────────────────────────────────────────
+const plantSwitcher = document.getElementById("plant-switcher");
+const plantSelect = document.getElementById("plant-select");
 
-document.getElementById("clear-history-btn").addEventListener("click", () => {
-  if (!confirm("ჩანაწერების გასუფთავება?")) return;
-  const data = JSON.parse(localStorage.getItem(getSetupStorageKey()) || "null");
-  localStorage.removeItem(getTaskStorageKey());
-  if (data) writeLocalTaskHistory([]);
-  renderTaskHistory([]);
-});
-
-// ── Field switcher UI ──
-const fieldSwitcher = document.getElementById("field-switcher");
-const fieldSelect   = document.getElementById("field-select");
-
-function renderFieldSwitcher() {
-  const fields = loadFields();
-  if (fields.length === 0) {
-    fieldSwitcher.classList.add("hidden");
+function renderPlantSwitcher() {
+  if (currentPlants.length === 0) {
+    plantSwitcher.classList.add("hidden");
     return;
   }
-  fieldSwitcher.classList.remove("hidden");
-  const activeId = getActiveFieldId();
-  fieldSelect.innerHTML = fields.map(f =>
-    `<option value="${f.id}" ${f.id === activeId ? "selected" : ""}>${f.name}</option>`
-  ).join("");
+  plantSwitcher.classList.remove("hidden");
+  plantSelect.innerHTML = currentPlants.map((p) => {
+    const catalogEntry = PLANT_CATALOG[p.catalog_id];
+    const label = p.nickname || catalogEntry?.georgian_name || p.catalog_id;
+    return `<option value="${p.id}" ${p.id === activePlantId ? "selected" : ""}>${label}</option>`;
+  }).join("");
 }
 
-fieldSelect.addEventListener("change", async () => {
-  setActiveFieldId(fieldSelect.value);
-  await reloadDataForCurrentScope();
-});
+async function loadAndShowPlants(preferredId) {
+  currentPlants = await listUserPlants();
+  renderPlantSwitcher();
 
-document.getElementById("add-field-btn").addEventListener("click", async () => {
-  const name = prompt("ახალი ნაკვეთის სახელი:", `ნაკვეთი ${loadFields().length + 1}`);
-  if (!name) return;
-  createField(name.trim());
-  renderFieldSwitcher();
-  const saved = await loadSetup();
-  if (saved) {
-    await renderDashboard(saved);
-  } else {
+  if (currentPlants.length === 0) {
+    activePlantId = null;
     dashboardPanel.classList.add("hidden");
     setupPanel.classList.remove("hidden");
+    return;
   }
+
+  const target =
+    currentPlants.find((p) => p.id === preferredId) ||
+    currentPlants.find((p) => p.id === activePlantId) ||
+    currentPlants[0];
+  activePlantId = target.id;
+  renderPlantSwitcher();
+  renderPlantDashboard(target);
+}
+
+plantSelect.addEventListener("change", () => {
+  activePlantId = plantSelect.value;
+  const plant = getActivePlant();
+  if (plant) renderPlantDashboard(plant);
 });
 
-document.getElementById("delete-field-btn").addEventListener("click", async () => {
-  const fields = loadFields();
-  if (fields.length <= 1) { alert("ბოლო ნაკვეთის წაშლა არ შეიძლება."); return; }
-  const active = fields.find(f => f.id === getActiveFieldId());
-  if (!confirm(`წაიშალოს "${active?.name}"?`)) return;
-  deleteField(getActiveFieldId());
-  renderFieldSwitcher();
-  await reloadDataForCurrentScope();
-});
+// ── Add/edit plant ───────────────────────────────────────────────────────
+function catalogOptionsHtml() {
+  return Object.entries(PLANT_CATALOG)
+    .sort((a, b) => a[1].georgian_name.localeCompare(b[1].georgian_name, "ka"))
+    .map(([id, p]) => `<option value="${id}">${p.georgian_name} (${p.latin_name})</option>`)
+    .join("");
+}
 
-document.getElementById("today-btn").addEventListener("click", () => {
-  document.getElementById("planting-date").value = new Date().toISOString().slice(0, 10);
-});
+function populateCatalogSelects() {
+  const html = `<option value="">აირჩიეთ...</option>${catalogOptionsHtml()}`;
+  const setupSelect = document.getElementById("plant-catalog");
+  const modalSelect = document.getElementById("modal-plant-catalog");
+  if (setupSelect) setupSelect.innerHTML = html;
+  if (modalSelect) modalSelect.innerHTML = html;
+}
 
-setupForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = new FormData(setupForm);
-  const data = {
-    crop: String(formData.get("crop") || "").trim(),
-    location: String(formData.get("location") || "").trim(),
-    plantingDate: String(formData.get("plantingDate") || "").trim(),
-    farmSize: parseFloat(formData.get("farmSize") || "0") || 0,
-    soilType: String(formData.get("soilType") || "").trim(),
-    irrigationType: String(formData.get("irrigationType") || "").trim(),
+function readPlantFormValues(form) {
+  const fd = new FormData(form);
+  return {
+    catalog_id: String(fd.get("catalogId") || "").trim(),
+    nickname: String(fd.get("nickname") || "").trim() || null,
+    location: String(fd.get("location") || "").trim() || null,
+    window_direction: String(fd.get("windowDirection") || "").trim() || null,
+    pot_size_cm: fd.get("potSizeCm") ? parseInt(fd.get("potSizeCm"), 10) : null
   };
+}
 
-  if (!data.crop || !data.location || !data.plantingDate) return;
-
-  // Create a field if none exist yet
-  if (loadFields().length === 0) {
-    const cropName = cropLabelsKa[data.crop] || data.crop;
-    createField(`${cropName} — ${data.location}`);
-  }
-
-  await saveSetup(data);
-  renderFieldSwitcher();
-  await renderDashboard(data);
+plantForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const values = readPlantFormValues(plantForm);
+  if (!values.catalog_id) return;
+  const created = await addUserPlant(values);
+  plantForm.reset();
+  if (created) await loadAndShowPlants(created.id);
 });
+
+const plantModal = document.getElementById("plant-modal");
+const plantModalForm = document.getElementById("plant-modal-form");
+const plantModalTitle = document.getElementById("plant-modal-title");
+let plantModalMode = "add";
+
+function openPlantModal(mode, plant) {
+  plantModalMode = mode;
+  plantModalTitle.textContent = mode === "edit" ? "მცენარის რედაქტირება" : "მცენარის დამატება";
+  document.getElementById("modal-plant-catalog").value = plant?.catalog_id || "";
+  document.getElementById("modal-plant-nickname").value = plant?.nickname || "";
+  document.getElementById("modal-plant-location").value = plant?.location || "";
+  document.getElementById("modal-plant-window").value = plant?.window_direction || "";
+  document.getElementById("modal-plant-pot-size").value = plant?.pot_size_cm || "";
+  plantModal.classList.remove("hidden");
+}
+
+document.getElementById("add-plant-btn").addEventListener("click", () => openPlantModal("add", null));
+document.getElementById("plant-modal-close").addEventListener("click", () => plantModal.classList.add("hidden"));
+plantModal.addEventListener("click", (e) => {
+  if (e.target === plantModal) plantModal.classList.add("hidden");
+});
+
+plantModalForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const values = {
+    catalog_id: document.getElementById("modal-plant-catalog").value,
+    nickname: document.getElementById("modal-plant-nickname").value.trim() || null,
+    location: document.getElementById("modal-plant-location").value.trim() || null,
+    window_direction: document.getElementById("modal-plant-window").value || null,
+    pot_size_cm: document.getElementById("modal-plant-pot-size").value
+      ? parseInt(document.getElementById("modal-plant-pot-size").value, 10)
+      : null
+  };
+  if (!values.catalog_id) return;
+
+  plantModal.classList.add("hidden");
+
+  if (plantModalMode === "edit" && activePlantId) {
+    const updated = await updateUserPlant(activePlantId, values);
+    if (updated) await loadAndShowPlants(updated.id);
+  } else {
+    const created = await addUserPlant(values);
+    if (created) await loadAndShowPlants(created.id);
+  }
+});
+
+document.getElementById("delete-plant-btn").addEventListener("click", async () => {
+  const plant = getActivePlant();
+  if (!plant) return;
+  const catalogEntry = PLANT_CATALOG[plant.catalog_id];
+  const label = plant.nickname || catalogEntry?.georgian_name || "მცენარე";
+  if (!confirm(`წაიშალოს "${label}"?`)) return;
+  await deleteUserPlant(plant.id);
+  await loadAndShowPlants();
+});
+
+editBtn.addEventListener("click", () => {
+  const plant = getActivePlant();
+  if (plant) openPlantModal("edit", plant);
+});
+
+document.getElementById("clear-history-btn").addEventListener("click", async () => {
+  if (!confirm("ჩანაწერების გასუფთავება?")) return;
+  if (!currentUser) {
+    writeLocalTaskHistory([]);
+  } else if (supabaseClient) {
+    const { error } = await supabaseClient.from("task_history").delete().not("id", "is", null);
+    if (error) logSupabaseError("task_history", "delete-all", error);
+  }
+  await refreshTaskHistory();
+});
+
+// ── Watering / fertilize / repot actions ────────────────────────────────
+async function markPlantCareDone(field, taskKey) {
+  const plant = getActivePlant();
+  if (!plant) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const updated = await updateUserPlant(plant.id, { [field]: today });
+  if (updated) {
+    await addTaskRecord(taskKey, plant.id);
+    await loadAndShowPlants(plant.id);
+  }
+}
+
+document.getElementById("water-btn").addEventListener("click", () => markPlantCareDone("last_watered", "water"));
+document.getElementById("fertilize-btn").addEventListener("click", () => markPlantCareDone("last_fertilized", "fertilize"));
+document.getElementById("repot-btn").addEventListener("click", () => markPlantCareDone("last_repotted", "repot"));
 
 authForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -2086,8 +1113,8 @@ authForm.addEventListener("submit", async (e) => {
 });
 
 // Mobile login modal
-const navLoginBtn   = document.getElementById("nav-login-btn");
-const loginModal    = document.getElementById("login-modal");
+const navLoginBtn = document.getElementById("nav-login-btn");
+const loginModal = document.getElementById("login-modal");
 const loginModalClose = document.getElementById("login-modal-close");
 const authFormModal = document.getElementById("auth-form-modal");
 const authEmailModal = document.getElementById("auth-email-modal");
@@ -2120,66 +1147,11 @@ logoutBtn.addEventListener("click", async () => {
   await logout();
 });
 
-editBtn.addEventListener("click", async () => {
-  const saved = await loadSetup();
-  if (saved) {
-    document.getElementById("crop").value = saved.crop;
-    document.getElementById("location").value = saved.location;
-    document.getElementById("planting-date").value = saved.plantingDate;
-    if (saved.farmSize) document.getElementById("farm-size").value = saved.farmSize;
-    if (saved.soilType) document.getElementById("soil-type").value = saved.soilType;
-    if (saved.irrigationType) document.getElementById("irrigation-type").value = saved.irrigationType;
-  }
-  dashboardPanel.classList.add("hidden");
-  setupPanel.classList.remove("hidden");
-});
-
-let autoRefreshTimer = null;
-
-async function refreshWeatherSilently() {
-  const refreshBtn = document.getElementById("refresh-btn");
-  const data = await loadSetup();
-  if (!data || !dashboardPanel.classList.contains("hidden") === false) return;
-  if (dashboardPanel.classList.contains("hidden")) return;
-  refreshBtn.classList.add("spinning");
-  refreshBtn.disabled = true;
-  await renderDashboard(data);
-  refreshBtn.classList.remove("spinning");
-  refreshBtn.disabled = false;
-}
-
-function startAutoRefresh() {
-  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer = setInterval(refreshWeatherSilently, 30 * 60 * 1000);
-}
-
-document.getElementById("refresh-btn").addEventListener("click", async () => {
-  const refreshBtn = document.getElementById("refresh-btn");
-  const data = await loadSetup();
-  if (!data) return;
-  refreshBtn.classList.add("spinning");
-  refreshBtn.disabled = true;
-  await renderDashboard(data);
-  refreshBtn.classList.remove("spinning");
-  refreshBtn.disabled = false;
-  startAutoRefresh();
-});
-
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
-    refreshWeatherSilently();
+    const plant = getActivePlant();
+    if (plant) renderPlantDashboard(plant);
   }
-});
-
-taskButtons.forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const taskKey = btn.dataset.task || "";
-    if (!taskKey) return;
-
-    await addTaskRecord(taskKey);
-    btn.classList.add("done");
-    setTimeout(() => btn.classList.remove("done"), 1000);
-  });
 });
 
 // ── Daily Email ──
@@ -2197,7 +1169,7 @@ function getEmailPayload() {
     spraying: document.getElementById("out-spraying")?.textContent || "",
     fertilizer: document.getElementById("out-fertilizer")?.textContent || "",
     alert: document.getElementById("out-alert")?.textContent || "",
-    harvest: document.getElementById("out-harvest")?.textContent || "",
+    harvest: document.getElementById("out-harvest")?.textContent || ""
   };
 }
 
@@ -2208,9 +1180,9 @@ async function sendDailyEmail() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${appConfig.supabaseAnonKey}`,
+      "Authorization": `Bearer ${appConfig.supabaseAnonKey}`
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   });
   if (!res.ok) {
     throw new Error(`daily-email failed with status ${res.status}`);
@@ -2273,7 +1245,6 @@ function scheduleMorningEmail() {
       localStorage.setItem(sentKey, "1");
     }, ms);
   } else {
-    // Already past 8am today — send now if not sent yet
     sendDailyEmail().then(() => localStorage.setItem(sentKey, "1"));
   }
 }
@@ -2285,7 +1256,7 @@ async function registerSW() {
   if (!("serviceWorker" in navigator)) return;
   try {
     await navigator.serviceWorker.register(new URL("sw.js", document.baseURI), {
-      scope: new URL(".", document.baseURI).pathname,
+      scope: new URL(".", document.baseURI).pathname
     });
   } catch (_) {}
 }
@@ -2306,67 +1277,20 @@ function showNotification(title, body) {
       icon: new URL("icons/icon-192.png", document.baseURI).href,
       badge: new URL("icons/icon-192.png", document.baseURI).href,
       tag: "smartfarm-daily",
-      renotify: true,
+      renotify: true
     });
   }).catch(() => {
     new Notification(title, { body });
   });
 }
 
-function scheduleNotifications(advice) {
-  const existing = localStorage.getItem(NOTIF_KEY);
-  const today = new Date().toISOString().slice(0, 10);
-  if (existing === today) return;
-  localStorage.setItem(NOTIF_KEY, today);
+// Phase 4 will replace this with a real per-plant watering-due check.
+function scheduleNotifications() {}
 
-  const now = new Date();
-  const morningTime = new Date();
-  morningTime.setHours(8, 0, 0, 0);
-  const eveningTime = new Date();
-  eveningTime.setHours(18, 0, 0, 0);
-
-  const msUntilMorning = morningTime - now;
-  const msUntilEvening = eveningTime - now;
-
-  let morningMsg = "დილა მშვიდობისა! ";
-  if (advice.watering?.includes("მოარწყე") || advice.watering?.includes("გაზარდეთ")) {
-    morningMsg += "დღეს მორწყვა გამახსოვრდა.";
-  } else if (advice.risk === "მაღალი") {
-    morningMsg += "დაავადების რისკი მაღალია — შეამოწმე ნაკვეთი.";
-  } else {
-    morningMsg += "შეამოწმე დღევანდელი რეკომენდაციები.";
-  }
-
-  if (msUntilMorning > 0) {
-    setTimeout(() => showNotification("🌱 SmartFarm", morningMsg), msUntilMorning);
-  }
-
-  if (msUntilEvening > 0 && advice.risk === "მაღალი") {
-    setTimeout(() => showNotification("🌱 SmartFarm", "⚠ საღამოს შეამოწმე ნაკვეთი — დაავადების რისკი მაღალია."), msUntilEvening);
-  }
-}
-
-async function initNotifications(advice) {
+async function initNotifications() {
   await registerSW();
   const granted = await requestNotifPermission();
-  if (granted) scheduleNotifications(advice);
-}
-
-function triggerWeatherAlertNotification(forecastAlerts) {
-  if (!forecastAlerts?.length) return;
-  if (Notification.permission !== "granted") return;
-
-  const critical = forecastAlerts.filter(a => a.critical);
-  const toNotify = critical.length > 0 ? critical : forecastAlerts;
-  const sentKey = `smartFarmWeatherAlert:${new Date().toISOString().slice(0, 10)}`;
-  if (localStorage.getItem(sentKey)) return;
-  localStorage.setItem(sentKey, "1");
-
-  new Notification("🌱 SmartFarm — ამინდის გაფრთხილება", {
-    body: toNotify.slice(0, 3).map(a => a.text).join("\n"),
-    icon: "favicon.svg",
-    tag: "weather-alert",
-  });
+  if (granted) scheduleNotifications();
 }
 
 // ── Chat ──
@@ -2409,7 +1333,7 @@ async function summarizeDay(date, messages) {
     const res = await fetch(`${appConfig.supabaseUrl}/functions/v1/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${appConfig.supabaseAnonKey}` },
-      body: JSON.stringify({ action: "summarize", date, messages }),
+      body: JSON.stringify({ action: "summarize", date, messages })
     });
     const data = await res.json();
     const summary = data.summary || "";
@@ -2449,7 +1373,6 @@ async function renderChatHistory() {
     chatMessages.appendChild(summaryDiv);
   }
 
-  // Today's messages
   if (history[today] && !history[today].summary) {
     for (const msg of history[today]) {
       const div = document.createElement("div");
@@ -2462,30 +1385,9 @@ async function renderChatHistory() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Phase 4 fills this in with the user's plant list + last-watered dates.
 function getChatContext() {
-  const setupData = JSON.parse(localStorage.getItem(getSetupStorageKey()) || "null");
-  const soilLabels = {
-    omrali: "ყომრალი (pH 5.6-6.8)", kavisperi: "ყავისფერი (pH 7.0-7.4)", shavimiwa: "შავმიწა (pH 7.5-8.2)",
-    aluviari: "ალუვიური (pH 6.0-7.9)", kiteli: "ყვითელმიწა ეწერი (pH 3.9-5.1)", tsiteli: "წითელმიწა (pH 4.5-5.5)",
-    ruxikavisf: "რუხი ყავისფერი (pH 8.0-8.4)", bicsobi: "ბიცი/ბიცობი (pH 8.1-9.0)", mtamdelo: "მთა-მდელოს კორდიანი (pH 5.1-5.2)",
-  };
-  const irrigLabels = { drip: "წვეთოვანი მორწყვა", furrow: "კვლებში მორწყვა", flood: "ზედაპირული მორწყვა (დატბორვით)", sprinkler: "დაწვიმებითი მორწყვა", rain: "მხოლოდ წვიმა" };
-  return {
-    cropKey: setupData?.crop || "",
-    soilKey: setupData?.soilType || "",
-    crop: document.getElementById("out-crop")?.textContent || "",
-    soilType: soilLabels[setupData?.soilType] || "",
-    irrigationType: irrigLabels[setupData?.irrigationType] || "",
-    location: document.getElementById("out-location")?.textContent || "",
-    stage: document.getElementById("out-stage")?.textContent || "",
-    weather: document.getElementById("out-weather")?.textContent || "",
-    watering: document.getElementById("out-watering")?.textContent || "",
-    risk: document.getElementById("out-risk")?.textContent || "",
-    spraying: document.getElementById("out-spraying")?.textContent || "",
-    fertilizer: document.getElementById("out-fertilizer")?.textContent || "",
-    pesticide: document.getElementById("out-pesticide")?.textContent || "",
-    alert: document.getElementById("out-alert")?.textContent || "",
-  };
+  return {};
 }
 
 function appendBubble(text, role) {
@@ -2504,11 +1406,9 @@ chatToggle.addEventListener("click", async () => {
   chatPanel.classList.toggle("hidden");
   if (wasHidden) {
     if (isMobile()) chatToggle.classList.add("hidden");
-    chatMessages.innerHTML = '<div class="chat-bubble bot">გამარჯობა! დამისვი კითხვა შენი ნაკვეთის შესახებ.</div>';
+    chatMessages.innerHTML = '<div class="chat-bubble bot">გამარჯობა! დამისვი კითხვა შენი მცენარეების შესახებ.</div>';
     await renderChatHistory();
-    // scroll to bottom before focusing (so keyboard doesn't hide messages)
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    // slight delay on mobile so layout settles before keyboard opens
     setTimeout(() => {
       chatMessages.scrollTop = chatMessages.scrollHeight;
       chatInput.focus();
@@ -2539,13 +1439,12 @@ async function sendChatRequest(message, imageBase64) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${appConfig.supabaseAnonKey}`,
+          "Authorization": `Bearer ${appConfig.supabaseAnonKey}`
         },
         body: JSON.stringify({ message, imageBase64, context: getChatContext() }),
-        signal: controller.signal,
+        signal: controller.signal
       });
     } catch (networkErr) {
-      // Covers offline/DNS/CORS failures (TypeError) and our own 20s abort timeout.
       typing.remove();
       appendBubble(CHAT_UNAVAILABLE_MSG, "bot");
       return;
@@ -2605,14 +1504,14 @@ document.getElementById("chat-photo").addEventListener("change", async (e) => {
     preview.appendChild(img);
     chatMessages.appendChild(preview);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    await sendChatRequest("ეს ფოტო ჩემი ნაკვეთიდანაა. გთხოვ გამიანალიზო — რა პრობლემა ან დაავადება ჩანს?", base64);
+    await sendChatRequest("ეს ფოტო ჩემი მცენარისაა. გთხოვ გამიანალიზო — რა პრობლემა ან დაავადება ჩანს?", base64);
   };
   reader.readAsDataURL(file);
 });
 
 (async function bootstrap() {
+  populateCatalogSelects();
   await initAuth();
-  renderFieldSwitcher();
   await reloadDataForCurrentScope();
 })();
 
