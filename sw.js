@@ -1,6 +1,6 @@
 // Bump this on every deploy that changes precached assets — it both names
 // the cache and is what makes activate() drop the previous version below.
-const CACHE_NAME = "smartfarm-static-v1";
+const CACHE_NAME = "smartfarm-static-v2";
 
 const PRECACHE_URLS = [
   "./",
@@ -34,6 +34,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function isAppShellRequest(request, url) {
+  // Top-level page loads (index.html, "./") and any JS file — these change
+  // on every deploy, so serving a stale cached copy would hide updates.
+  return request.mode === "navigate" || url.pathname.endsWith(".js");
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -46,7 +52,26 @@ self.addEventListener("fetch", (event) => {
   // (weather APIs, Google Fonts, CDN scripts) — never cache API responses.
   if (!isSameOrigin || isApiCall) return;
 
-  // Cache-first for same-origin static assets.
+  if (isAppShellRequest(request, url)) {
+    // Network-first: always fetch the latest HTML/JS; only fall back to
+    // the cache when the network is unavailable (offline). "no-cache" forces
+    // revalidation with the server so the browser's own HTTP cache can't
+    // mask an update the same way the old cache-first strategy did.
+    event.respondWith(
+      fetch(request, { cache: "no-cache" })
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Cache-first for same-origin static assets (icons, fonts, CSS, manifest).
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
