@@ -5,6 +5,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface PlantStatus {
+  name: string;
+  species: string;
+  watering: string;
+  wateringDue: boolean;
+  fertilize: string;
+  fertilizeDue: boolean;
+  repot: string;
+  repotDue: boolean;
+}
+
+function renderPlantCard(p: PlantStatus): string {
+  const rows = [
+    { icon: "💧", label: "მორწყვა", text: p.watering, due: p.wateringDue },
+    { icon: "🌱", label: "სასუქი", text: p.fertilize, due: p.fertilizeDue },
+    { icon: "🪴", label: "გადარგვა", text: p.repot, due: p.repotDue },
+  ];
+
+  return `
+    <div style="background:#fff;border:1px solid #e0d4c0;border-radius:8px;padding:16px 18px;margin-bottom:12px;">
+      <p style="font-size:15px;font-weight:700;color:#1c1814;margin:0 0 4px;">🌿 ${p.name}</p>
+      <p style="font-size:12px;color:#7a6e58;margin:0 0 10px;">${p.species}</p>
+      ${rows.map((r) => `
+        <div style="display:flex;align-items:baseline;gap:8px;padding:4px 0;">
+          <span style="font-size:13px;${r.due ? "color:#a01414;font-weight:700;" : "color:#1c1814;"}">${r.icon} ${r.label}:</span>
+          <span style="font-size:13px;${r.due ? "color:#a01414;font-weight:700;" : "color:#5a4004;"}">${r.text}</span>
+        </div>`).join("")}
+    </div>`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -12,7 +42,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { email, crop, location, stage, weather, watering, risk, spraying, fertilizer, alert, harvest } = body;
+    const email = body.email as string;
+    const plants = (body.plants as PlantStatus[]) || [];
 
     if (!email) {
       return new Response(JSON.stringify({ error: "email required" }), {
@@ -33,8 +64,12 @@ Deno.serve(async (req) => {
       day: "numeric", month: "long", year: "numeric"
     }).format(new Date());
 
-    const riskColor = risk === "მაღალი" ? "#dc2626" : risk === "საშუალო" ? "#d97706" : "#16a34a";
-    const riskBg   = risk === "მაღალი" ? "#fef2f2" : risk === "საშუალო" ? "#fffbeb" : "#f0fdf4";
+    const dueCount = plants.filter((p) => p.wateringDue || p.fertilizeDue || p.repotDue).length;
+    const summaryText = plants.length === 0
+      ? "ჯერ არცერთი მცენარე არ გაქვთ დამატებული."
+      : dueCount > 0
+      ? `დღეს ${dueCount} მცენარეს სჭირდება ყურადღება.`
+      : "დღეს ყველა მცენარე მოვლილია — დამატებითი ქმედება საჭირო არ არის.";
 
     const html = `
 <!DOCTYPE html>
@@ -44,62 +79,17 @@ Deno.serve(async (req) => {
   <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
 
     <div style="background:#1a3a0e;border-radius:12px 12px 0 0;padding:24px 28px;">
-      <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 4px;">🌱 SmartFarm</p>
+      <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 4px;">🌱 PlantCare</p>
       <h1 style="color:#eee8dc;font-size:22px;margin:0;">${today}</h1>
-      <p style="color:rgba(238,232,220,.7);font-size:14px;margin:6px 0 0;">${crop} — ${location}</p>
+      <p style="color:rgba(238,232,220,.7);font-size:14px;margin:6px 0 0;">${summaryText}</p>
     </div>
 
-    <div style="background:#fff;padding:24px 28px;border-left:1px solid #e0d4c0;border-right:1px solid #e0d4c0;">
-
-      <div style="background:#fdf8e4;border:1.5px solid #e8d070;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
-        <p style="color:#5a4004;font-size:14px;margin:0;font-weight:500;">⚠ ${alert}</p>
-      </div>
-
-      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-        <tr>
-          <td style="padding:10px 14px;border-bottom:1px solid #f0e8d8;width:36%">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;letter-spacing:.06em;">ზრდის ფაზა</span><br/>
-            <span style="font-size:14px;color:#1c1814;">🌿 ${stage}</span>
-          </td>
-          <td style="padding:10px 14px;border-bottom:1px solid #f0e8d8;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;letter-spacing:.06em;">ამინდი</span><br/>
-            <span style="font-size:14px;color:#1c1814;">${weather}</span>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" style="padding:10px 14px;border-bottom:1px solid #f0e8d8;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;letter-spacing:.06em;">სავარაუდო მოსავალი</span><br/>
-            <span style="font-size:14px;color:#1c1814;">🌾 ${harvest}</span>
-          </td>
-        </tr>
-      </table>
-
-      <h3 style="font-size:13px;font-weight:700;text-transform:uppercase;color:#7a6e58;letter-spacing:.06em;margin:0 0 12px;">დღევანდელი რეკომენდაციები</h3>
-
-      <div style="background:#f2f7ec;border:1px solid #c8d8a8;border-left:4px solid #3d7224;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
-        <p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;margin:0 0 6px;letter-spacing:.06em;">💧 მორწყვა</p>
-        <p style="font-size:14px;color:#1c1814;margin:0;">${watering}</p>
-      </div>
-
-      <div style="background:${riskBg};border:1px solid #e0d4c0;border-left:4px solid ${riskColor};border-radius:8px;padding:14px 16px;margin-bottom:10px;">
-        <p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;margin:0 0 6px;letter-spacing:.06em;">🦠 დაავადების რისკი</p>
-        <p style="font-size:14px;font-weight:700;color:${riskColor};margin:0;">${risk}</p>
-      </div>
-
-      <div style="background:#fff8f2;border:1px solid #e0d4c0;border-left:4px solid #c4621a;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
-        <p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;margin:0 0 6px;letter-spacing:.06em;">🌿 შეწამვლა</p>
-        <p style="font-size:14px;color:#1c1814;margin:0;">${spraying}</p>
-      </div>
-
-      <div style="background:#f2f7ec;border:1px solid #c8d8a8;border-left:4px solid #3d7224;border-radius:8px;padding:14px 16px;">
-        <p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a6e58;margin:0 0 6px;letter-spacing:.06em;">🌱 სასუქი</p>
-        <p style="font-size:14px;color:#1c1814;margin:0;">${fertilizer}</p>
-      </div>
-
+    <div style="background:#fff;padding:20px 24px;border-left:1px solid #e0d4c0;border-right:1px solid #e0d4c0;border-bottom:1px solid #e0d4c0;border-radius:0 0 12px 12px;">
+      ${plants.length ? plants.map(renderPlantCard).join("") : `<p style="font-size:14px;color:#7a6e58;margin:0;">დაამატეთ პირველი მცენარე PlantCare-ში, რომ მიიღოთ ყოველდღიური მოვლის შეხსენებები.</p>`}
     </div>
 
-    <div style="background:#1a3a0e;border-radius:0 0 12px 12px;padding:16px 28px;text-align:center;">
-      <p style="color:rgba(238,232,220,.45);font-size:12px;margin:0;">🌱 SmartFarm — ჭკვიანი სოფლის მეურნეობა</p>
+    <div style="text-align:center;padding:16px 0;">
+      <p style="color:#7a6e58;font-size:12px;margin:0;">🌱 PlantCare — მცენარეების მოვლის ასისტენტი</p>
     </div>
 
   </div>
@@ -113,9 +103,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "SmartFarm <onboarding@resend.dev>",
+        from: "PlantCare <onboarding@resend.dev>",
         to: [email],
-        subject: `🌱 SmartFarm — ${today} — ${crop}`,
+        subject: `🌱 PlantCare — ${today}${dueCount > 0 ? ` — ${dueCount} მცენარეს სჭირდება ყურადღება` : ""}`,
         html,
       }),
     });

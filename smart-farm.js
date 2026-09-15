@@ -973,6 +973,9 @@ async function loadAndShowPlants(preferredId) {
   activePlantId = target.id;
   renderPlantSwitcher();
   renderPlantDashboard(target);
+
+  void initNotifications();
+  scheduleMorningEmail();
 }
 
 plantSelect.addEventListener("change", () => {
@@ -1158,18 +1161,27 @@ document.addEventListener("visibilitychange", () => {
 const NOTIF_EMAIL_KEY = "smartFarmNotifEmail";
 
 function getEmailPayload() {
+  const plants = currentPlants.map((p) => {
+    const catalogEntry = PLANT_CATALOG[p.catalog_id];
+    if (!catalogEntry) return null;
+    const watering = buildWateringVerdict(p, catalogEntry);
+    const fertilize = buildFertilizeVerdict(p, catalogEntry);
+    const repot = buildRepotVerdict(p, catalogEntry);
+    return {
+      name: p.nickname || catalogEntry.georgian_name,
+      species: catalogEntry.georgian_name,
+      watering: watering.text,
+      wateringDue: watering.dueToday,
+      fertilize: fertilize.text,
+      fertilizeDue: fertilize.dueToday,
+      repot: repot.text,
+      repotDue: repot.dueToday
+    };
+  }).filter(Boolean);
+
   return {
     email: localStorage.getItem(NOTIF_EMAIL_KEY) || "",
-    crop: document.getElementById("out-crop")?.textContent || "",
-    location: document.getElementById("out-location")?.textContent || "",
-    stage: document.getElementById("out-stage")?.textContent || "",
-    weather: document.getElementById("out-weather")?.textContent || "",
-    watering: document.getElementById("out-watering")?.textContent || "",
-    risk: document.getElementById("out-risk")?.textContent || "",
-    spraying: document.getElementById("out-spraying")?.textContent || "",
-    fertilizer: document.getElementById("out-fertilizer")?.textContent || "",
-    alert: document.getElementById("out-alert")?.textContent || "",
-    harvest: document.getElementById("out-harvest")?.textContent || ""
+    plants
   };
 }
 
@@ -1284,8 +1296,33 @@ function showNotification(title, body) {
   });
 }
 
-// Phase 4 will replace this with a real per-plant watering-due check.
-function scheduleNotifications() {}
+function scheduleNotifications() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (localStorage.getItem(NOTIF_KEY) === today) return;
+  localStorage.setItem(NOTIF_KEY, today);
+
+  const duePlants = currentPlants.filter((p) => {
+    const catalogEntry = PLANT_CATALOG[p.catalog_id];
+    return catalogEntry && buildWateringVerdict(p, catalogEntry).dueToday;
+  });
+  if (!duePlants.length) return;
+
+  const names = duePlants.map((p) => p.nickname || PLANT_CATALOG[p.catalog_id]?.georgian_name || "მცენარე");
+  const body = names.length === 1
+    ? `${names[0]}ს მორწყვის დროა 🌿`
+    : `${names.length} მცენარეს სჭირდება მორწყვა დღეს 🌿`;
+
+  const now = new Date();
+  const morningTime = new Date();
+  morningTime.setHours(8, 0, 0, 0);
+  const msUntilMorning = morningTime - now;
+
+  if (msUntilMorning > 0) {
+    setTimeout(() => showNotification("🌱 PlantCare", body), msUntilMorning);
+  } else {
+    showNotification("🌱 PlantCare", body);
+  }
+}
 
 async function initNotifications() {
   await registerSW();
@@ -1387,7 +1424,29 @@ async function renderChatHistory() {
 
 // Phase 4 fills this in with the user's plant list + last-watered dates.
 function getChatContext() {
-  return {};
+  const plants = currentPlants.map((p) => {
+    const catalogEntry = PLANT_CATALOG[p.catalog_id];
+    if (!catalogEntry) return null;
+    return {
+      name: p.nickname || catalogEntry.georgian_name,
+      species: catalogEntry.georgian_name,
+      latinName: catalogEntry.latin_name,
+      location: p.location || "",
+      windowDirection: WINDOW_LABELS_KA[p.window_direction] || "",
+      lastWatered: p.last_watered || null,
+      lastFertilized: p.last_fertilized || null,
+      lastRepotted: p.last_repotted || null,
+      commonProblems: catalogEntry.common_problems
+    };
+  }).filter(Boolean);
+
+  const activePlant = getActivePlant();
+  const activeCatalogEntry = activePlant ? PLANT_CATALOG[activePlant.catalog_id] : null;
+  const activePlantName = activePlant
+    ? activePlant.nickname || activeCatalogEntry?.georgian_name || null
+    : null;
+
+  return { plants, activePlantName };
 }
 
 function appendBubble(text, role) {
